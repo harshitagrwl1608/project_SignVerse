@@ -3,9 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>SignVerse — Learn ASL</title>
+<title>SignVerse — Learn Indian Sign Language (ISL)</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Fredoka+One&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A4%9B%3C/text%3E%3C/svg%3E">
 </head>
 <body>
 
@@ -34,6 +35,7 @@
   <div><div class="logo-tx">SignVerse</div><div class="logo-sb">Learn Sign Language</div></div>
   <nav class="nav">
     <button class="nb act" onclick="swTab('translate',this)"><span>✍️</span><span>Translate</span></button>
+    <button class="nb" onclick="swTab('dictionary',this)"><span>📖</span><span>Dictionary</span></button>
     <button class="nb" onclick="swTab('quiz',this)"><span>🎯</span><span>Quiz</span></button>
     <button class="nb" onclick="swTab('learn',this)"><span>📚</span><span>Learn</span></button>
     <button class="nb" onclick="swTab('recognize',this)"><span>📷</span><span>Recognize</span></button>
@@ -49,7 +51,7 @@
   <div class="tl-left">
     <div class="hero">
       <div class="htit">Turn any word into a <span class="tw hl" id="tw">sign 🤙</span></div>
-      <div class="hsub">Type a word or sentence — see the ASL sign instantly!</div>
+      <div class="hsub">Type English or Hindi — see the <b>Indian Sign Language</b> sign, word by word.</div>
     </div>
     <div class="icard">
       <div class="itop"><span class="ilbl">✍️ Your message</span>
@@ -76,6 +78,11 @@
         <label class="tog"><input type="checkbox" id="mtog" checked onchange="showMot=this.checked"><span class="tsl"></span></label>
       </div>
     </div>
+    <div class="translate-note">
+      <b>Word-by-word demonstration.</b> Indian Sign Language is a full language with its own grammar and word order.
+      This view signs each English word separately — it is <b>not</b> a linguistically validated sentence translation.
+      For a sentence, watch the official ISLRTC material or work with a qualified ISL interpreter.
+    </div>
     <div>
       <div style="font-size:10px;font-weight:900;color:var(--txt-soft);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">📋 Sign Queue</div>
       <div class="qrow" id="qrow"></div>
@@ -90,8 +97,16 @@
         <div class="prw"><span class="prt" id="prt"></span>
           <div class="pbar"><div class="pfill" id="pfill" style="width:0%"></div></div></div>
       </div>
+      <div class="stage-controls">
+        <button type="button" class="ctl" id="tr-play" aria-label="Play or pause the demonstration">▶</button>
+        <button type="button" class="ctl" id="tr-replay" aria-label="Replay the current sign">↻</button>
+        <button type="button" class="ctl" id="tr-loop" aria-pressed="false" aria-label="Loop the demonstration">🔁</button>
+        <button type="button" class="ctl-mode" id="tr-mode" title="Switch between the 3D avatar and the 2D illustration">2D</button>
+        <span class="ctl-note" id="tr-note">Sign a word to begin</span>
+      </div>
       <div class="scanv">
-        <svg id="hc" viewBox="0 0 480 400" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:400px;height:100%"></svg>
+        <div class="sv-host" id="tr-3d"></div>
+        <svg id="hc" class="sv-fallback" viewBox="0 0 480 400" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:400px;height:100%"></svg>
         <div class="idlw" id="idlw">
           <span class="iem">🖐️</span>
           <div class="itx">Ready to sign!</div>
@@ -111,6 +126,40 @@
   </div>
 
 </div>
+</div>
+
+<!-- DICTIONARY -->
+<div class="panel" id="panel-dictionary">
+  <div class="dict-wrap">
+    <div class="dict-left">
+      <div class="dict-head">
+        <div class="dict-title">📖 ISL Dictionary</div>
+        <div class="dict-sub">Indian Sign Language signs by English or Hindi word. Every entry shows its verification status and links to the official ISLRTC demonstration.</div>
+      </div>
+      <div class="dict-searchrow">
+        <label class="visually-hidden" for="dict-q">Search the ISL dictionary</label>
+        <input class="dict-input" id="dict-q" type="search" autocomplete="off"
+          placeholder="Search English or Hindi — e.g. hello, thank you, नमस्ते" />
+        <label class="visually-hidden" for="dict-cat">Filter by category</label>
+        <select class="dict-select" id="dict-cat"><option value="">All categories</option></select>
+        <label class="visually-hidden" for="dict-status">Filter by verification status</label>
+        <select class="dict-select" id="dict-status">
+          <option value="">Any status</option>
+          <option value="verified">Reviewed / verified</option>
+          <option value="unverified">Unverified approximation</option>
+        </select>
+      </div>
+      <div class="dict-cats" id="dict-cats"></div>
+      <div class="dict-results" id="dict-results" role="listbox" aria-label="Dictionary results"></div>
+    </div>
+    <div class="dict-detail" id="dict-detail" aria-live="polite">
+      <div class="dict-empty">
+        <div class="dict-empty-ico">📖</div>
+        <div class="dict-empty-t">Pick a word to see its sign</div>
+        <div class="dict-empty-s">Search on the left, then choose an entry to see the demonstration, the meaning, the source and the verification status.</div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- QUIZ -->
@@ -140,7 +189,7 @@
       <button class="qmb" onclick="setQM('spell',this)">✏️ Spell It!</button>
     </div>
     <div class="qstg">
-      <svg id="qhc" viewBox="0 0 480 400" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:380px;height:100%"></svg>
+      <svg id="qhc" class="sv-fallback" viewBox="0 0 480 400" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:380px;height:100%"></svg>
       <div class="qcd" id="qcd"></div>
     </div>
     <div class="qbody">
@@ -203,7 +252,8 @@
     <div id="learn-normal">
       <div class="ldet">
         <div class="lcw" style="position:relative">
-          <svg id="lhc" viewBox="0 0 480 400" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:380px;height:100%"></svg>
+          <div class="sv-host" id="ln-3d"></div>
+          <svg id="lhc" class="sv-fallback" viewBox="0 0 480 400" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:380px;height:100%"></svg>
           <div class="idlw" id="lidl"><span class="iem">👆</span><div class="itx">Pick a sign</div><div class="isx">from the sidebar</div></div>
           <!-- step dots -->
           <div class="step-row" id="step-row" style="position:absolute;bottom:8px;left:0;right:0"></div>
@@ -224,6 +274,10 @@
         <button class="ltool-btn on" onclick="setLSpeed(3,this)">🚶</button>
         <button class="ltool-btn" onclick="setLSpeed(5,this)">🚀</button>
         <button class="ltool-btn" id="zoom-btn" onclick="toggleZoom(this)" style="margin-left:auto">🔍 Zoom</button>
+        <span class="ctl-mode" id="ln-mode" title="Renderer in use">2D</span>
+      </div>
+      <div style="display:flex;gap:8px;width:100%;max-width:440px;align-items:center">
+        <div class="ctl-bar" style="flex:1"><div class="ctl-fill" id="ln-fill"></div></div>
       </div>
       <div class="lnav">
         <button class="lnb" onclick="lPrev()">← Prev</button>
@@ -235,7 +289,7 @@
     <div id="learn-flash" style="display:none;width:100%;max-width:440px">
       <div class="flashcard" id="flashcard" onclick="revealFlash()">
         <div class="fc-front">
-          <svg id="fc-hc" viewBox="0 0 480 400" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:360px;height:220px"></svg>
+          <svg id="fc-hc" class="sv-fallback" viewBox="0 0 480 400" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:360px;height:220px"></svg>
           <span class="fc-hint">👆 Tap to reveal the word!</span>
         </div>
         <div class="fc-back">
@@ -410,6 +464,12 @@
   </div>
 </div>
 </div>
+<script src="isl-sources.js"></script>
+<script src="isl-dictionary.js"></script>
+<script src="sign-clips.js"></script>
+<script src="sign-rig.js"></script>
+<script src="sign-viewer.js"></script>
+<script src="dictionary-ui.js"></script>
 <script src="features.js"></script>
 <script src="animation.js"></script>
 </body>

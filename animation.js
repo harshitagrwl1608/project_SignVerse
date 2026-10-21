@@ -249,38 +249,6 @@ const S={
   COMPUTER:{f:[1,1,1,1,1],th:'o',w:0,oval:true,type:'word',cat:'noun',desc:'C-hand circles near elbow — computer',motion:{t:'circle',r:18},hands:'right'},
 };
 
-// ── WORD ALIASES — maps any typed variant to its sign key ──
-const ALIASES={
-  // question words
-  'WHAT':'WHAT','WHEN':'WHEN','WHERE':'WHERE','WHY':'WHY','HOW':'HOW',
-  'WHICH':'WHICH','WHO':'WHO','WHOM':'WHOM','WHOSE':'WHOSE',
-  // auxiliary verbs
-  'IS':'IS','ARE':'ARE','DO':'DO','DOES':'DOES','DID':'DID',
-  'CAN':'CAN','COULD':'COULD','WILL':'WILL','WOULD':'WOULD','SHOULD':'SHOULD',
-  // pronouns
-  'I':'I','ME':'ME','YOU':'YOU','HE':'HE','HIM':'HIM',
-  'SHE':'SHE','HER':'HER','IT':'IT','WE':'WE','US':'US',
-  'THEY':'THEY','THEM':'THEM',
-  // possessives
-  'MY':'MY','YOUR':'YOUR','HIS':'HIS','ITS':'ITS','OUR':'OUR','THEIR':'THEIR',
-  'MINE':'MINE','YOURS':'YOURS','HERS':'HERS','OURS':'OURS','THEIRS':'THEIRS',
-  // action verbs
-  'GO':'GO','COME':'COME','SIT':'SIT','STAND':'STAND','TALK':'TALK',
-  'SAY':'SAY','TELL':'TELL','ASK':'ASK','ANSWER':'ANSWER','CALL':'CALL',
-  'SEE':'SEE','LOOK':'LOOK','WATCH':'WATCH','HEAR':'HEAR','LISTEN':'LISTEN',
-  'MAKE':'MAKE','BUILD':'BUILD','CREATE':'CREATE','TRY':'TRY','USE':'USE',
-  'TAKE':'TAKE','GIVE':'GIVE','BRING':'BRING','SEND':'SEND','RECEIVE':'RECEIVE',
-  'OPEN':'OPEN','CLOSE':'CLOSE','START':'START','STOP':'STOP','MOVE':'MOVE',
-  'LEARN':'LEARN','TEACH':'TEACH','STUDY':'STUDY','READ':'READ','WRITE':'WRITE',
-  'PLAY':'PLAY','WIN':'WIN','LOSE':'LOSE','HELP':'HELP','WORK':'WORK','TRAVEL':'TRAVEL',
-  'RUN':'RUN','WALK':'WALK','EAT':'EAT','DRINK':'DRINK','SLEEP':'SLEEP',
-  // nouns
-  'PERSON':'PERSON','PLACE':'PLACE','THING':'THING','DAY':'DAY','NIGHT':'NIGHT',
-  'YEAR':'YEAR','HOME':'HOME','SCHOOL':'SCHOOL','OFFICE':'OFFICE','MARKET':'MARKET',
-  'HOSPITAL':'HOSPITAL','BOOK':'BOOK','PEN':'PEN','PHONE':'PHONE',
-  'COMPUTER':'COMPUTER','TABLE':'TABLE','CHAIR':'CHAIR','MONEY':'MONEY',
-  'FOOD':'FOOD','WATER':'WATER','AIR':'AIR','TIME':'TIME','NAME':'NAME',
-};
 
 // ── HAND RENDERER ─────────────────────────────────────
 // CRITICAL: All colors are FLAT HEX — no url() references!
@@ -292,10 +260,15 @@ const SKHI='#FDDEC8', SKSH='rgba(120,45,10,0.18)', SKJT='#C95A28';
 // thumb, index, middle, ring, pinky — spaced further apart for clarity
 const FB=[{x:-64,y:-24},{x:-36,y:-58},{x:-8,y:-68},{x:20,y:-60},{x:46,y:-46}];
 const FL=[44,76,84,74,58], FW=[16,14,14,13,12];
-const SPD=[0,800,580,380,240,140];
 let speed=3, showMot=true, paused=false;
 
-function setSpd(s,btn){speed=s;document.querySelectorAll('.sb').forEach(b=>b.classList.remove('act'));btn.classList.add('act')}
+function setSpd(s,btn){
+  speed=s;
+  document.querySelectorAll('.sb').forEach(b=>b.classList.remove('act'));
+  btn.classList.add('act');
+  if(trViewer) trViewer.setSpeed(s);
+  if(typeof learnViewer!=='undefined'&&learnViewer) learnViewer.setSpeed(s);
+}
 function upCnt(){
   const v=document.getElementById('txt').value;
   const r=200-v.length;
@@ -305,15 +278,13 @@ function upCnt(){
 }
 
 function togglePause(){
-  paused=!paused;
-  document.getElementById('pause-btn').textContent=paused?'▶ Resume':'⏸ Pause';
-  if(!paused) signNext(); // resume
+  if(!trViewer) return;
+  paused=!trViewer.playing;
+  trViewer.toggle();
+  document.getElementById('pause-btn').textContent=trViewer.playing?'⏸ Pause':'▶ Resume';
 }
 function skipSign(){
-  if(aT)clearTimeout(aT);if(sT)clearTimeout(sT);
-  if(animSign._raf){cancelAnimationFrame(animSign._raf);animSign._raf=null;}
-  qi++;
-  signNext();
+  if(trViewer) trViewer.skip(1);
 }
 
 function el(tag,a,p){const e=document.createElementNS(NS,tag);for(const[k,v]of Object.entries(a||{}))e.setAttribute(k,v);if(p)p.appendChild(e);return e}
@@ -491,41 +462,127 @@ function renderSign(svg,sign,prog,prev){
 }
 
 // ── ANIMATION ENGINE ───────────────────────────────────
-let aT=null,sT=null,queue=[],qi=0;
+// The sign queue now resolves against the ISL lexicon (isl-dictionary.js).
+// Tokens keep their display key plus the dictionary entry that carries
+// the handshape, the body location and the movement path.
+let queue=[];
 
+/**
+ * Resolve typed text into sign tokens.
+ * Longest-phrase-first so "good morning" matches the GOOD MORNING entry
+ * instead of two unrelated words.
+ */
 function tokenize(txt){
   const toks=[];
-  for(const w of txt.trim().toUpperCase().split(/\s+/)){
-    if(!w)continue;
-    if(S[w]){toks.push({key:w,sign:S[w]});continue;}
-    if(ALIASES[w]&&S[ALIASES[w]]){toks.push({key:ALIASES[w],sign:S[ALIASES[w]]});continue;}
-    const uw=w.replace(/\s+/g,'_');
-    if(S[uw]){toks.push({key:uw,sign:S[uw]});continue;}
-    // Smart fallback: only fingerspell if word is short (≤6 chars);
-    // longer unknown words get skipped with a placeholder to avoid huge delays
-    if(w.length<=6){
-      for(const ch of w)if(S[ch])toks.push({key:ch,sign:S[ch]});
-    } else {
-      // Spell just first 4 chars + ellipsis chip so user knows it was skipped
-      const chars=w.slice(0,4);
-      for(const ch of chars)if(S[ch])toks.push({key:ch,sign:S[ch]});
-      toks.push({key:w.slice(4)+'…',sign:S['A'],skip:true}); // placeholder
+  const words=String(txt||'').trim().split(/\s+/).filter(Boolean);
+  let i=0;
+  while(i<words.length){
+    let matched=false;
+    for(let span=Math.min(3,words.length-i);span>=1;span--){
+      const phrase=words.slice(i,i+span).join(' ');
+      const entry=ISLDictionary.resolve(phrase);
+      if(entry){
+        toks.push({key:entry.en,entry:entry});
+        i+=span;matched=true;break;
+      }
     }
+    if(matched) continue;
+    const w=words[i];
+    const key=w.toUpperCase();
+    const entry=ISLDictionary.get(key)||ISLDictionary.get('FS_'+key);
+    if(entry){
+      toks.push({key:entry.en,entry:entry});
+    } else if(key.length<=4){
+      // short unknown word — fingerspell it letter by letter
+      let spelled=true;
+      for(const ch of key){
+        const fs=ISLDictionary.get('FS_'+ch);
+        if(!fs){spelled=false;break;}
+        toks.push({key:ch,entry:fs,spell:true});
+      }
+      if(!spelled){
+        while(toks.length&&toks[toks.length-1].spell)toks.pop();
+        toks.push({key:w,entry:null,missing:true});
+      }
+    } else {
+      toks.push({key:w,entry:null,missing:true});
+    }
+    i++;
   }
   return toks;
+}
+
+/* ── translate stage viewer ─────────────────────────────────── */
+let trViewer=null;
+
+function trState(state){
+  const fill=document.getElementById('pfill');
+  if(fill) fill.style.width=Math.round((state.progress||0)*100)+'%';
+  const mode=document.getElementById('tr-mode');
+  if(mode){
+    const using3d=state.mode==='3d'&&state.preferred!=='2d';
+    mode.textContent=using3d?'3D':'2D';
+    mode.title=using3d?'Three.js 3D avatar — click to switch':'2D illustration — click to switch to the 3D avatar';
+  }
+  const pb=document.getElementById('pause-btn');
+  if(pb&&pb.style.display!=='none') pb.textContent=state.playing?'⏸ Pause':'▶ Resume';
+  const note=document.getElementById('tr-note');
+  if(note&&state.entry){
+    const st=ISLDictionary.statusOf(state.entry);
+    note.textContent=st.key==='unverified'
+      ? 'Approximation — not validated against the ISLRTC video'
+      : st.label;
+  }
+}
+
+function getTrViewer(){
+  if(trViewer) return trViewer;
+  trViewer=new SignViewer.Viewer({
+    svg:document.getElementById('hc'),
+    host:document.getElementById('tr-3d'),
+    stage:document.getElementById('sstage'),
+    onState:trState,
+    onEnd:function(){
+      document.getElementById('cbadge').textContent='Done! 🎉';
+      document.getElementById('sstage').classList.remove('play');
+      document.getElementById('pause-btn').style.display='none';
+      document.getElementById('skip-btn').style.display='none';
+      const cta=document.querySelector('.ctabtn');
+      if(cta){cta.disabled=false;cta.style.opacity='';}
+      setP(1);
+    },
+    onWordChange:function(entry){
+      const badge=document.getElementById('cbadge');
+      if(badge&&entry) badge.textContent=entry.en.replace(/_/g,' ');
+      const idlw=document.getElementById('idlw');
+      if(idlw) idlw.style.display='none';
+    }
+  });
+  return trViewer;
 }
 
 function startSign(){
   const txt=document.getElementById('txt').value.trim();
   if(!txt) return;
-  if(aT)clearTimeout(aT); if(sT)clearTimeout(sT);
-  if(animSign._raf){cancelAnimationFrame(animSign._raf);animSign._raf=null;}
   paused=false;
   queue=tokenize(txt); if(!queue.length) return;
+  const signable=queue.filter(function(t){return t.entry;});
+  if(!signable.length){
+    if(trViewer) trViewer.pause();
+    document.getElementById('cbadge').textContent='Not in the offline lexicon';
+    document.getElementById('tr-note').textContent='Open the official ISLRTC dictionary for this word (see the Dictionary tab)';
+    document.getElementById('idlw').style.display='';
+    document.getElementById('sstage').classList.remove('play');
+    document.getElementById('pause-btn').style.display='none';
+    document.getElementById('skip-btn').style.display='none';
+    const cta=document.querySelector('.ctabtn');
+    if(cta){cta.disabled=false;cta.style.opacity='';}
+    setP(0);
+    renderQ();
+    return;
+  }
   if(queue.length>20&&speed<3){setSpd(3,document.querySelectorAll('.sb')[1]);}
   if(queue.length>40&&speed<5){setSpd(5,document.querySelectorAll('.sb')[2]);}
-  qi=0;
-  // Disable button during playback to prevent spam
   const cta=document.querySelector('.ctabtn');
   if(cta){cta.disabled=true;cta.style.opacity='0.6';}
   document.getElementById('idlw').style.display='none';
@@ -534,69 +591,39 @@ function startSign(){
   document.getElementById('pause-btn').textContent='⏸ Pause';
   document.getElementById('skip-btn').style.display='block';
   renderQ(); setP(0);
-  signNext();
-}
-
-function signNext(){
-  if(paused) return;
-  if(qi>=queue.length){
-    document.getElementById('cbadge').textContent='Done! 🎉';
-    document.getElementById('sstage').classList.remove('play');
-    document.getElementById('pause-btn').style.display='none';
-    document.getElementById('skip-btn').style.display='none';
-    // Re-enable button
-    const cta=document.querySelector('.ctabtn');
-    if(cta){cta.disabled=false;cta.style.opacity='';}
-    setP(1); return;
-  }
-  const tok=queue[qi];
-  document.getElementById('cbadge').textContent=tok.key.replace(/_/g,' ');
-  document.getElementById('prt').textContent=(qi+1)+'/'+queue.length;
-  setP(qi/queue.length);
-  renderQ();
-  if(tok.skip){qi++;sT=setTimeout(signNext,60);return;}
-  animSign(document.getElementById('hc'),tok.sign,null,()=>{
-    qi++;
-    const pause=tok.sign.type==='letter'?SPD[speed]*.10:SPD[speed]*.18;
-    sT=setTimeout(signNext,pause);
-  });
+  const viewer=getTrViewer();
+  viewer.setSpeed(speed);
+  viewer.playSequence(signable.map(function(t){return t.entry;}),0);
+  if(viewer.threeStatus==='idle') viewer.enable3D();
 }
 
 function renderQ(){
   const w=document.getElementById('qrow');
+  if(!w) return;
+  const signable=queue.filter(function(t){return t.entry;});
+  const currentIdx=signable.length?signable.findIndex(function(t){return t.entry===(trViewer&&trViewer.current);}):-1;
   if(w.children.length!==queue.length){
     w.innerHTML='';
     const frag=document.createDocumentFragment();
-    queue.forEach((t,i)=>{
+    queue.forEach(function(t,i){
       const c=document.createElement('div');
-      c.className='qchip'+(i===qi?' act':i<qi?' dn':'');
-      if(t.skip)c.style.opacity='0.45';
+      c.className='qchip';
       c.textContent=t.key.replace(/_/g,' ');
+      if(t.missing){c.classList.add('missing');c.title='Not in the offline ISL lexicon — check the official ISLRTC dictionary';}
       frag.appendChild(c);
     });
     w.appendChild(frag);
-  } else {
-    const chips=w.children;
-    for(let i=0;i<chips.length;i++){
-      const cl=chips[i].classList;
-      cl.toggle('act',i===qi);
-      cl.toggle('dn',i<qi);
-    }
   }
+  Array.prototype.forEach.call(w.children,function(c,i){
+    const tok=queue[i];
+    const signIdx=queue.slice(0,i).filter(function(t){return t.entry;}).length;
+    c.classList.toggle('act',!!tok.entry&&signIdx===currentIdx);
+    c.classList.toggle('dn',!!tok.entry&&currentIdx>=0&&signIdx<currentIdx);
+  });
+  const prt=document.getElementById('prt');
+  if(prt) prt.textContent=signable.length?(Math.max(0,currentIdx)+1)+'/'+signable.length:'';
 }
 
-function animSign(svg,sign,prev,cb){
-  const dur=SPD[speed],start=performance.now();
-  // Cancel any in-flight animation frame
-  if(animSign._raf){cancelAnimationFrame(animSign._raf);animSign._raf=null;}
-  function tick(now){
-    const t=Math.min((now-start)/dur,1);
-    renderSign(svg,sign,t,prev);
-    if(t<1){animSign._raf=requestAnimationFrame(tick);}
-    else{animSign._raf=null;if(cb)aT=setTimeout(cb,dur*.10);}
-  }
-  animSign._raf=requestAnimationFrame(tick);
-}
 
 function setP(p){document.getElementById('pfill').style.width=(p*100)+'%'}
 
@@ -615,7 +642,7 @@ function startVoice(){
 
 // ── QUIZ ───────────────────────────────────────────────
 let qMode='s2w',qC=0,qT=0,qStr=0,qSc=0,qKey='',qLk=false,qCT=null;
-const QP=Object.keys(S).filter(k=>S[k].type==='word');
+const QP=ISLDictionary.words().map(function(e){return e.id;});
 
 function setQM(m,btn){qMode=m;document.querySelectorAll('.qmb').forEach(b=>b.classList.remove('act'));btn.classList.add('act');nextQ()}
 
@@ -633,8 +660,9 @@ function nextQ(){
   let attempts=0;
   while(newKey===qKey&&attempts<10){newKey=QP[Math.floor(Math.random()*QP.length)];attempts++;}
   qKey=newKey;
-  const sign=S[qKey];
-  if(!sign) return;
+  const entry=ISLDictionary.get(qKey);
+  if(!entry) return;
+  const sign=ISLDictionary.legacyShape(entry);
   // Build options — cap loop to avoid infinite hang if QP is small
   const opts=new Set([qKey]);
   let tries=0;
@@ -718,25 +746,49 @@ function updQ(){
 }
 
 // ── LEARN ──────────────────────────────────────────────
-const LCATS={
-  '👋 Greetings':['HELLO','HI','BYE','GOOD_MORNING','GOOD_NIGHT','THANK','SORRY','PLEASE','WELCOME','YES','NO','HOW_ARE_YOU','EXCUSE_ME','NAME'],
-  '❤️ Emotions':['LOVE','HAPPY','SAD','ANGRY','SCARED','EXCITED','TIRED','GOOD','BAD','FUNNY','SURPRISED','I_LOVE_YOU'],
-  '❓ Questions':['WHAT','WHEN','WHERE','WHY','HOW','WHICH','WHO','WHOM','WHOSE'],
-  '🔤 Pronouns':['I','ME','YOU','HE','HIM','SHE','HER','IT','WE','US','THEY','THEM','MY','YOUR','HIS','ITS','OUR','THEIR','MINE','YOURS','HERS','OURS','THEIRS'],
-  '⚡ Aux Verbs':['IS','ARE','DO','DOES','DID','CAN','COULD','WILL','WOULD','SHOULD'],
-  '🏃 Action Verbs':['GO','COME','EAT','DRINK','SLEEP','WALK','RUN','SIT','STAND','TALK','SAY','TELL','ASK','ANSWER','CALL','SEE','LOOK','WATCH','HEAR','LISTEN','MAKE','BUILD','CREATE','TRY','USE','TAKE','GIVE','BRING','SEND','RECEIVE','OPEN','CLOSE','START','STOP','MOVE','LEARN','TEACH','STUDY','READ','WRITE','PLAY','WIN','LOSE','HELP','WORK','TRAVEL'],
-  '🏠 Nouns':['PERSON','PLACE','THING','DAY','NIGHT','YEAR','HOME','SCHOOL','OFFICE','MARKET','HOSPITAL','BOOK','PEN','PHONE','COMPUTER','TABLE','CHAIR','MONEY','FOOD','WATER','AIR','TIME','NAME'],
-  '👨👩👧 People':['BOY','GIRL','MAN','WOMAN','BABY','CHILD','MOTHER','FATHER','SISTER','BROTHER','FRIEND','FAMILY','TEACHER','DOCTOR','GRANDMA','GRANDPA'],
-  '🍽️ Food':['FOOD','EAT','DRINK','WATER','MILK','APPLE','BANANA','PIZZA','CAKE','ICE_CREAM','CHOCOLATE','COFFEE','HOT','COLD','SWEET','HUNGRY'],
-  '📅 Daily Life':['SLEEP','WAKE_UP','BRUSH_TEETH','SHOWER','WALK','RUN','READ','WRITE','PLAY','WORK','HOME','SCHOOL','BOOK','PENCIL','PHONE','MUSIC','CAR','TIME'],
-  '🎨 Colors':['RED','BLUE','GREEN','YELLOW','WHITE','BLACK','PURPLE'],
-  '🔢 Numbers':['ONE','TWO','THREE','FOUR','FIVE','SIX','SEVEN','EIGHT','NINE','TEN'],
-};
-const LK=Object.keys(S).filter(k=>S[k].type==='word');
+// The learn engine now works on the ISL lexicon (isl-dictionary.js).
+// Categories are derived from the dictionary so the sidebar, the
+// flashcards and the category game always stay in sync with the data.
+const ISL_CAT_EMOJI={};
+ISL_CATS.forEach(function(c){ISL_CAT_EMOJI[c.id]=c.emoji;});
+
+function islCategoryGroups(){
+  return ISLDictionary.categoryGroups();
+}
+
+const LK=ISLDictionary.words().map(function(e){return e.id;});
 let lIdx=0,selKey='HELLO';
 
-// buildLSB and selLearn defined below in the enhanced section
-function lPlay(){const sign=S[selKey];if(!sign)return;animSign(document.getElementById('lhc'),sign,null,()=>selLearn(selKey))}
+// ── LEARN VIEWER (3D + 2D fallback) ────────────────────
+let learnViewer=null;
+function getLearnViewer(){
+  if(learnViewer) return learnViewer;
+  const svg=document.getElementById('lhc');
+  learnViewer=new SignViewer.Viewer({
+    svg:svg,
+    host:document.getElementById('ln-3d'),
+    stage:svg?svg.parentNode:null,
+    onState:function(state){
+      const bar=document.getElementById('ln-fill');
+      if(bar) bar.style.width=Math.round((state.progress||0)*100)+'%';
+      const mode=document.getElementById('ln-mode');
+      if(mode) mode.textContent=state.mode==='3d'?'3D':'2D';
+    }
+  });
+  return learnViewer;
+}
+if(typeof window!=='undefined'){
+  window.getLearnViewer=getLearnViewer;
+  Object.defineProperty(window,'learnViewer',{get:function(){return learnViewer;}});
+}
+
+function lPlay(){
+  const entry=ISLDictionary.get(selKey);if(!entry)return;
+  const v=getLearnViewer();
+  v.setSequence([entry],0);
+  v.show(entry,{autoPlay:true});
+  if(v.threeStatus==='idle') v.enable3D();
+}
 function lPrev(){selLearn(LK[Math.max(0,lIdx-1)])}
 function lNext(){selLearn(LK[Math.min(LK.length-1,lIdx+1)])}
 
@@ -753,9 +805,56 @@ function swTab(id,btn){
     const sb=document.getElementById('lsb');
     if(!sb.children.length){buildLSB();}
     selLearn(selKey);
+    // the 3D avatar is loaded the first time the learner opens this tab
+    const lv=getLearnViewer();
+    if(lv.threeStatus==='idle') lv.enable3D();
   }
+  // Dictionary: the search index is built once, results are re-filtered
+  if(id==='dictionary'){
+    if(typeof DictionaryUI!=='undefined'&&DictionaryUI) DictionaryUI.refresh();
+  }
+  // The 3D avatar keeps rendering only while its panel is visible
+  if(id!=='translate'&&trViewer) trViewer.pause();
+  if(id!=='learn'&&typeof learnViewer!=='undefined'&&learnViewer) learnViewer.pause();
   if(id!=='recognize'&&recRunning) stopRecognizer();
 }
+
+// ── STAGE CONTROLS (translate) ─────────────────────────
+(function wireStageControls(){
+  function bind(){
+    const play=document.getElementById('tr-play');
+    const replay=document.getElementById('tr-replay');
+    const loop=document.getElementById('tr-loop');
+    if(play) play.addEventListener('click',function(){
+      const v=getTrViewer();
+      v.toggle();
+      play.textContent=v.playing?'⏸':'▶';
+      play.setAttribute('aria-label',v.playing?'Pause the demonstration':'Play the demonstration');
+    });
+    if(replay) replay.addEventListener('click',function(){ getTrViewer().replay(); });
+    if(loop) loop.addEventListener('click',function(){
+      const v=getTrViewer();
+      v.setLoop(!v.loop);
+      loop.setAttribute('aria-pressed',v.loop?'true':'false');
+      loop.classList.toggle('on',v.loop);
+    });
+    const modeBtn=document.getElementById('tr-mode');
+    if(modeBtn) modeBtn.addEventListener('click',function(){
+      const v=getTrViewer();
+      const next=v.preferred==='2d'?'3d':'2d';
+      v.setRenderer(next);
+      modeBtn.textContent=next==='2d'?'2D':'3D';
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bind);
+  else bind();
+})();
+
+// ── BOOT ───────────────────────────────────────────────
+// Pre-load the first quiz question once every script is evaluated.
+(function boot(){
+  if(typeof nextQ==='function'&&qT===0&&!qKey) nextQ();
+})();
 
 // ── DARK MODE ──────────────────────────────────────────
 function toggleDark(){

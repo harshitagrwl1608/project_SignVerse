@@ -206,26 +206,8 @@ let favSigns=new Set(JSON.parse(localStorage.getItem('sv-favs')||'[]'));
 let recentSigns=JSON.parse(localStorage.getItem('sv-recent')||'[]');
 let lZoomed=false;
 
-// CATEGORY EMOJIS for word chips
-const CAT_EMOJI={
-  HELLO:'👋',HI:'👋',BYE:'👋',THANK:'🙏',SORRY:'😔',PLEASE:'🙏',WELCOME:'🤗',
-  LOVE:'❤️',HAPPY:'😊',SAD:'😢',ANGRY:'😠',SCARED:'😱',EXCITED:'🤩',TIRED:'😴',
-  GOOD:'👍',BAD:'👎',FUNNY:'😄',SURPRISED:'😲',I_LOVE_YOU:'🤟',
-  BOY:'👦',GIRL:'👧',MAN:'👨',WOMAN:'👩',BABY:'👶',CHILD:'🧒',
-  MOTHER:'👩',FATHER:'👨',SISTER:'👧',BROTHER:'👦',FRIEND:'🤝',FAMILY:'👨👩👧',
-  TEACHER:'👩🏫',DOCTOR:'👨⚕️',GRANDMA:'👵',GRANDPA:'👴',
-  FOOD:'🍽️',EAT:'🍴',DRINK:'🥤',WATER:'💧',MILK:'🥛',APPLE:'🍎',BANANA:'🍌',
-  PIZZA:'🍕',CAKE:'🎂',ICE_CREAM:'🍦',CHOCOLATE:'🍫',COFFEE:'☕',
-  HOT:'🔥',COLD:'🧊',SWEET:'🍬',HUNGRY:'🤤',
-  SLEEP:'😴',WAKE_UP:'⏰',BRUSH_TEETH:'🪥',SHOWER:'🚿',WALK:'🚶',RUN:'🏃',
-  READ:'📖',WRITE:'✍️',PLAY:'🎮',WORK:'💼',HOME:'🏠',SCHOOL:'🏫',
-  BOOK:'📚',PENCIL:'✏️',PHONE:'📱',MUSIC:'🎵',CAR:'🚗',TIME:'⏰',
-  HELP:'🆘',MORE:'➕',STOP:'🛑',WAIT:'⏳',KNOW:'💡',UNDERSTAND:'💡',
-  COME:'👈',GO:'👉',LEARN:'📚',SIGN:'🤟',DEAF:'👂',
-  RED:'🔴',BLUE:'🔵',GREEN:'🟢',YELLOW:'🟡',WHITE:'⚪',BLACK:'⚫',PURPLE:'🟣',
-  ONE:'1️⃣',TWO:'2️⃣',THREE:'3️⃣',FOUR:'4️⃣',FIVE:'5️⃣',
-  SIX:'6️⃣',SEVEN:'7️⃣',EIGHT:'8️⃣',NINE:'9️⃣',TEN:'🔟',
-};
+// CATEGORY EMOJIS live with the lexicon (ISLDictionary.emoji) so that both
+// the dictionary and the learn engine always use the same icon.
 
 // Enhanced buildLSB — only call once or when data changes
 let lsbBuilt=false;
@@ -236,24 +218,24 @@ function buildLSB(force=false){
   lsbBuilt=true;
   sb.innerHTML='';
   const frag=document.createDocumentFragment();
-  for(const[cat,words] of Object.entries(LCATS)){
+  islCategoryGroups().forEach(function(group){
     const sec=document.createElement('div');sec.className='cgrp';
-    sec.innerHTML=`<div class="chd">${cat}</div>`;
+    sec.innerHTML=`<div class="chd">${group.label}</div>`;
     const chips=document.createElement('div');chips.className='wcps';
-    words.filter(w=>S[w]).forEach(w=>{
+    group.ids.filter(function(w){return ISLDictionary.get(w);}).forEach(function(w){
       const c=document.createElement('div');
       const isFav=favSigns&&favSigns.has(w);
       const isLearned=learnedSigns&&learnedSigns.has(w);
       c.className='wcp'+(w===selKey?' sl':'')+(isFav?' faved':'');
       c.id='wc-'+w;
-      const emoji=CAT_EMOJI[w]||'';
-      c.innerHTML=`${emoji} ${w.replace(/_/g,' ')}<span class="fav-dot">⭐</span>`;
+      const entry=ISLDictionary.get(w);
+      c.innerHTML=`${ISLDictionary.emoji(w)} ${entry.en.replace(/_/g,' ')}<span class="fav-dot">⭐</span>`;
       if(isLearned)c.style.opacity='.75';
       c.onclick=()=>selLearn(w);
       chips.appendChild(c);
     });
     sec.appendChild(chips);frag.appendChild(sec);
-  }
+  });
   sb.appendChild(frag);
   updateProgressRing();
   buildRecentSection();
@@ -262,24 +244,27 @@ function buildLSB(force=false){
 
 // Enhanced selLearn — tracks recents, learned, fav
 function selLearn(key){
-  selKey=key; lIdx=LK.indexOf(key);
+  selKey=key; lIdx=ISLDictionary.wordIds().indexOf(key);
   // Fast chip highlight — only touch changed chips
   const prev=document.querySelector('.wcp.sl');
   if(prev&&prev.id!=='wc-'+key) prev.classList.remove('sl');
   const el2=document.getElementById('wc-'+key);
   if(el2){el2.classList.add('sl');el2.scrollIntoView({block:'nearest'});}
-  const sign=S[key]; if(!sign)return;
+  const entry=ISLDictionary.get(key); if(!entry)return;
   const lidl=document.getElementById('lidl');if(lidl)lidl.style.display='none';
-  const lnm=document.getElementById('lnm');if(lnm)lnm.textContent=key.replace(/_/g,' ');
-  const ldc=document.getElementById('ldc');if(ldc)ldc.textContent=sign.desc||'No description.';
+  const lnm=document.getElementById('lnm');if(lnm)lnm.textContent=entry.en.replace(/_/g,' ');
+  const ldc=document.getElementById('ldc');if(ldc)ldc.textContent=entry.senses[0].text+(entry.senses[0].note?' — '+entry.senses[0].note:'');
   const bw=document.getElementById('lbdg');
   if(bw){
     bw.innerHTML='';
-    [[`bt`,sign.type.toUpperCase()],[`bh`,sign.hands==='both'?'🙌 Two Hands':'✋ One Hand'],
-     ...(sign.motion?[[`bm`,'🌀 '+sign.motion.t]]:[])
-    ].forEach(([cls,txt])=>{const b=document.createElement('span');b.className='bdg '+cls;b.textContent=txt;bw.appendChild(b);});
+    const status=ISLDictionary.statusOf(entry);
+    [[`bt`,entry.type.toUpperCase()],[`bh`,entry.hands==='both'?'🙌 Two Hands':'✋ One Hand'],
+     ...(entry.path?[[`bm`,'🌀 '+entry.path.t]]:[]),
+     [`bs`,status.label]
+    ].forEach(function(pair){const b=document.createElement('span');b.className='bdg '+pair[0];b.textContent=pair[1];bw.appendChild(b);});
   }
-  const svg=document.getElementById('lhc');if(svg){svg.innerHTML='';renderSign(svg,sign,1,null);}
+  const svg=document.getElementById('lhc');
+  if(svg){svg.innerHTML='';renderSign(svg,ISLDictionary.legacyShape(entry),1,null);}
   // Track learned
   if(learnedSigns&&!learnedSigns.has(key)){
     learnedSigns.add(key);
@@ -302,7 +287,7 @@ function selLearn(key){
 }
 
 function updateProgressRing(){
-  const total=LK.length;
+  const total=ISLDictionary.wordIds().length;
   const done=learnedSigns.size;
   const pct=total>0?done/total:0;
   const circ=2*Math.PI*22;
@@ -321,21 +306,22 @@ function buildRecentSection(){
   sec.style.display='block';row.innerHTML='';
   recentSigns.slice(0,5).forEach(k=>{
     const c=document.createElement('div');c.className='recent-chip';
-    c.textContent=(CAT_EMOJI[k]||'')+' '+k.replace(/_/g,' ');
+    c.textContent=ISLDictionary.emoji(k)+' '+(ISLDictionary.get(k)?ISLDictionary.get(k).en.replace(/_/g,' '):k.replace(/_/g,' '));
     c.onclick=()=>selLearn(k);row.appendChild(c);
   });
 }
 
 function buildDailySign(){
-  const keys=Object.keys(S).filter(k=>S[k].type==='word');
+  const keys=ISLDictionary.words().map(function(e){return e.id;});
   const idx=Math.floor(new Date().getDate())%keys.length;
-  const key=keys[idx];const sign=S[key];
-  document.getElementById('daily-word').textContent=key.replace(/_/g,' ');
-  document.getElementById('daily-desc').textContent=sign.desc||'';
-  document.getElementById('daily-emoji').textContent=CAT_EMOJI[key]||'📅';
+  const key=keys[idx];const entry=ISLDictionary.get(key);
+  if(!entry) return;
+  document.getElementById('daily-word').textContent=entry.en.replace(/_/g,' ');
+  document.getElementById('daily-desc').textContent=entry.senses[0].text;
+  document.getElementById('daily-emoji').textContent=ISLDictionary.emoji(key);
 }
 function playDailySign(){
-  const keys=Object.keys(S).filter(k=>S[k].type==='word');
+  const keys=ISLDictionary.words().map(function(e){return e.id;});
   const idx=Math.floor(new Date().getDate())%keys.length;
   selLearn(keys[idx]);
   setLearnMode('normal',document.getElementById('lt-normal'));
@@ -356,6 +342,7 @@ function setLearnMode(mode,btn){
 // MIRROR MODE
 function toggleMirror(btn){
   mirrorOn=!mirrorOn;btn.classList.toggle('on',mirrorOn);
+  if(typeof learnViewer!=='undefined'&&learnViewer) learnViewer.setMirror(mirrorOn);
   if(selKey)selLearn(selKey);
 }
 
@@ -367,14 +354,16 @@ function setLSpeed(s,btn){
   lSpeed=s; speed=s;
   document.querySelectorAll('.learn-toolbar .ltool-btn:not(#lt-mirror):not(#lt-normal):not(#lt-flash):not(#lt-game):not(#zoom-btn)').forEach(b=>b.classList.remove('on'));
   btn.classList.add('on');
+  if(typeof learnViewer!=='undefined'&&learnViewer) learnViewer.setSpeed(s);
 }
 
 // ZOOM
 function toggleZoom(btn){
   lZoomed=!lZoomed;btn.classList.toggle('on',lZoomed);
   const lhc=document.getElementById('lhc');
-  lhc.style.transform=lZoomed?'scale(1.5)':'scale(1)';
-  lhc.style.transformOrigin='center top';
+  if(lhc){lhc.style.transform=lZoomed?'scale(1.5)':'scale(1)';lhc.style.transformOrigin='center top';}
+  const host=document.getElementById('ln-3d');
+  if(host){host.style.transform=lZoomed?'scale(1.3)':'scale(1)';host.style.transformOrigin='center center';}
 }
 
 // FAVOURITE
@@ -392,21 +381,21 @@ function toggleFav(){
 // ── FLASHCARD MODE ──────────────────────────────────────────
 let fcKeys=[],fcIdx=0;
 function startFlashcard(){
-  fcKeys=Object.keys(S).filter(k=>S[k].type==='word').sort(()=>Math.random()-.5);
+  fcKeys=ISLDictionary.words().map(function(e){return e.id;}).sort(()=>Math.random()-.5);
   fcIdx=0;showFlash();
 }
 function showFlash(){
   if(!fcKeys||fcKeys.length===0)startFlashcard();
   const key=fcKeys[fcIdx%fcKeys.length];
-  const sign=S[key];if(!sign)return;
+  const entry=ISLDictionary.get(key);if(!entry)return;
   const fc=document.getElementById('flashcard');
   if(!fc)return;
   fc.classList.remove('revealed');
-  const fw=document.getElementById('fc-word');if(fw)fw.textContent=key.replace(/_/g,' ');
-  const fd=document.getElementById('fc-desc');if(fd)fd.textContent=sign.desc||'';
-  const fe=document.getElementById('fc-emoji');if(fe)fe.textContent=CAT_EMOJI[key]||'🤟';
+  const fw=document.getElementById('fc-word');if(fw)fw.textContent=entry.en.replace(/_/g,' ');
+  const fd=document.getElementById('fc-desc');if(fd)fd.textContent=entry.senses[0].text;
+  const fe=document.getElementById('fc-emoji');if(fe)fe.textContent=ISLDictionary.emoji(key);
   const svg=document.getElementById('fc-hc');
-  if(svg){svg.innerHTML='';renderSign(svg,sign,1,null);}
+  if(svg){svg.innerHTML='';renderSign(svg,ISLDictionary.legacyShape(entry),1,null);}
 }
 function revealFlash(){
   document.getElementById('flashcard').classList.add('revealed');
@@ -416,18 +405,19 @@ function nextFlash(){fcIdx++;showFlash();}
 
 // ── CATEGORY GAME ───────────────────────────────────────────
 const GAME_CATS={
-  '🍕 FOOD':['FOOD','EAT','DRINK','WATER','MILK','APPLE','BANANA','PIZZA','CAKE','HOT','COLD'],
-  '❤️ EMOTIONS':['LOVE','HAPPY','SAD','ANGRY','SCARED','EXCITED','TIRED','FUNNY','SURPRISED'],
-  '👨👩👧 PEOPLE':['MOTHER','FATHER','SISTER','BROTHER','FRIEND','FAMILY','BABY','TEACHER'],
-  '📅 DAILY':['SLEEP','WALK','RUN','READ','WRITE','PLAY','WORK','SCHOOL','BOOK','PHONE'],
-  '🎨 COLORS':['RED','BLUE','GREEN','YELLOW','WHITE','BLACK','PURPLE'],
+  '🍕 FOOD':['FOOD','EAT','DRINK','WATER','MILK','FRUIT','BANANA','BREAD','RICE','TEA','HUNGRY','SWEET'],
+  '❤️ EMOTIONS':['LOVE','HAPPY','SAD','ANGRY','SCARED','EXCITED','TIRED','FUNNY','SURPRISED','PROUD','WORRIED','SHY'],
+  '👨‍👩‍👧 PEOPLE':['MOTHER','FATHER','SISTER','BROTHER','FRIEND','FAMILY','BABY','TEACHER','DOCTOR','CHILD','BOY','GIRL'],
+  '📅 DAILY LIFE':['SLEEP','WAKE_UP','READ','WRITE','PLAY','WORK','SCHOOL','BOOK','PHONE','WALK','RUN','TIME'],
+  '🎨 COLOURS':['RED','BLUE','GREEN','YELLOW','WHITE','BLACK','BROWN'],
 };
 let cgTarget=[],cgFound=new Set(),cgAll=[];
 function startCatGame(){
   const cats=Object.keys(GAME_CATS);
   const cat=cats[Math.floor(Math.random()*cats.length)];
   cgTarget=GAME_CATS[cat];cgFound=new Set();
-  const decoys=Object.keys(S).filter(k=>S[k].type==='word'&&!cgTarget.includes(k)).sort(()=>Math.random()-.5).slice(0,6);
+  const decoys=ISLDictionary.words().map(function(e){return e.id;})
+    .filter(function(k){return cgTarget.indexOf(k)===-1;}).sort(()=>Math.random()-.5).slice(0,6);
   cgAll=[...cgTarget,...decoys].sort(()=>Math.random()-.5).slice(0,12);
   const tEl=document.getElementById('cg-title');if(tEl)tEl.textContent=cat;
   const sEl=document.getElementById('cg-sub');if(sEl)sEl.textContent='Tap every sign that belongs to this category!';
@@ -435,11 +425,11 @@ function startCatGame(){
 }
 function renderCatGame(){
   const grid=document.getElementById('cg-grid');grid.innerHTML='';
-  cgAll.forEach(k=>{
+  cgAll.forEach(function(k){
     const b=document.createElement('button');b.className='cgbtn';
     const isFound=cgFound.has(k);
     if(isFound)b.classList.add('cg-done');
-    b.innerHTML=`<span class="cg-emoji">${CAT_EMOJI[k]||'🤟'}</span>${k.replace(/_/g,' ')}`;
+    b.innerHTML=`<span class="cg-emoji">${ISLDictionary.emoji(k)}</span>${ISLDictionary.get(k).en.replace(/_/g,' ')}`;
     b.onclick=()=>{
       if(isFound||b.classList.contains('cg-done'))return;
       if(cgTarget.includes(k)){cgFound.add(k);b.classList.add('cg-done');playCorrect();addXP(5);}
@@ -1264,8 +1254,8 @@ function stopRecognizer(){
   updateProgressRing();
   buildRecentSection();
   buildDailySign();
-  // Pre-load first quiz question silently
-  nextQ();
+  // Dictionary tab (search index + category chips)
+  if(typeof DictionaryUI!=='undefined'&&DictionaryUI) DictionaryUI.init();
 })();
 
 // Resize confetti canvas
