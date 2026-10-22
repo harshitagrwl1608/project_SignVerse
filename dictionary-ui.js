@@ -338,7 +338,17 @@ const DictionaryUI = (function () {
 
   function openDetail(id) {
     const entry = ISLDictionary.get(id);
-    if (!entry) return;
+    if (!entry) {
+      if (els.detail) {
+        els.detail.innerHTML =
+          '<div class="dict-empty">' +
+          '<div class="dict-empty-ico">\uD83D\uDD0D</div>' +
+          '<div class="dict-empty-t">This entry is not in the offline lexicon</div>' +
+          '<div class="dict-empty-s">The word could not be resolved. Open the official ISLRTC dictionary ' +
+          'to see the reference demonstration for it.</div></div>';
+      }
+      return;
+    }
     currentEntry = entry;
     currentSense = 0;
     currentVariant = null;
