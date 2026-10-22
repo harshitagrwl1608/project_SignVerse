@@ -84,12 +84,19 @@ Data and rendering are kept apart: `isl-dictionary.js` (metadata) →
   megabytes of GLB:
   `root → torso → neck → head` and
   `torso → shoulder → upperArm → elbow → forearm → wrist → palm → 4 fingers × (MCP/PIP/DIP) + 2 thumb joints`.
-* **Two-link IK** solves the arm so the hand actually reaches the body
-  location the sign needs (forehead, chin, chest, ear …); the elbow is pushed
-  outwards so the forearm does not cover the face.
+* **Human proportions and a face** — the head has eyes, brows, nose, mouth,
+  ears and hair; the limbs are tapered bones with rounded joints so the arm
+  reads as one continuous limb instead of a chain of beads.
+* **Two-link IK with a pole vector** places the elbow on the circle of valid
+  solutions, closest to a natural "elbow down and slightly out" direction, so
+  the arm looks human instead of mechanical.
+* **Camera framing follows the sign.** For every clip the camera computes the
+  box that contains the head *and* the path of the hands and frames it with a
+  margin — the handshape, the part a learner has to read, is always large
+  enough to see and never leaves the frame.
 * **Every word gets its own clip.** A clip is generated from the entry's
   handshape, body location, movement path, repetition count and timing — so
-  `HELLO` (forehead, arc), `EAT` (mouth, tap ×3) and `LOVE` (both hands,
+  `HELLO` (forehead, arc), `EAT` (mouth, tap ×3) and `LOVE` (two hands,
   crossed over the chest) are genuinely different motions. Clips are built
   with `THREE.AnimationClip` + `AnimationMixer` on demand and cached per entry.
 * **Lazy loading** — Three.js is fetched from a CDN only when the first sign

@@ -28,43 +28,47 @@ const ISL_FINGER_ANGLES = {
 /* Thumb: spread = abduction at the base, bend = flexion of the first
    joint, twist = rotation of the thumb towards the palm. */
 const ISL_THUMB_ANGLES = {
-  side: { spread: -34, bend: 22, twist: 0 },
-  front: { spread: -26, bend: 38, twist: 10 },
-  folded: { spread: -62, bend: 74, twist: 0 },
-  up: { spread: -18, bend: -12, twist: 0 },
-  out: { spread: -72, bend: 8, twist: 0 },
-  curve: { spread: -30, bend: 56, twist: 6 },
-  o: { spread: -24, bend: 62, twist: 18 },
-  oval: { spread: -24, bend: 62, twist: 18 },
-  touch: { spread: 14, bend: 46, twist: 30 },
-  touch_idx: { spread: 20, bend: 52, twist: 34 },
-  between: { spread: 24, bend: 62, twist: 40 },
-  between_if: { spread: 26, bend: 66, twist: 44 },
-  under2: { spread: 26, bend: 60, twist: 42 },
-  under3: { spread: 28, bend: 58, twist: 40 },
-  under: { spread: 30, bend: 50, twist: 34 },
-  point: { spread: -12, bend: 14, twist: 0 },
-  point2: { spread: -6, bend: 20, twist: 8 }
+  /* flex  = flexion of the thumb towards the palm (0 = straight out,
+             90 = pointing forward, 180 = folded across the palm)
+     raise = elevation of the thumb inside the palm plane
+     twist = roll of the thumb (turns the pad towards the palm)        */
+  side: { flex: 20, raise: -20, twist: 0 },
+  front: { flex: 70, raise: 10, twist: 14 },
+  folded: { flex: 160, raise: 22, twist: 8 },
+  up: { flex: 20, raise: 80, twist: 0 },
+  out: { flex: 6, raise: -12, twist: 0 },
+  curve: { flex: 45, raise: 30, twist: 12 },
+  o: { flex: 30, raise: 74, twist: 26 },
+  oval: { flex: 30, raise: 74, twist: 26 },
+  touch: { flex: 62, raise: 42, twist: 40 },
+  touch_idx: { flex: 68, raise: 46, twist: 44 },
+  between: { flex: 76, raise: 30, twist: 50 },
+  between_if: { flex: 70, raise: 36, twist: 52 },
+  under2: { flex: 80, raise: 26, twist: 48 },
+  under3: { flex: 82, raise: 28, twist: 46 },
+  under: { flex: 86, raise: 30, twist: 42 },
+  point: { flex: 12, raise: 10, twist: 0 },
+  point2: { flex: 22, raise: 16, twist: 8 }
 };
 
 /* Where the sign is performed. Positions are the target position of the
    RIGHT wrist in avatar space (metres, origin at the feet, +Z towards
    the viewer). Euler angles orient the right palm absolutely. */
 const ISL_LOCATIONS = {
-  forehead: { pos: [-0.075, 1.600, 0.145], euler: [14, 68, 0] },
-  temple: { pos: [-0.140, 1.625, 0.080], euler: [10, 55, 0] },
-  cheek: { pos: [-0.110, 1.560, 0.120], euler: [8, 74, 0] },
-  chin: { pos: [-0.055, 1.490, 0.140], euler: [12, 60, 0] },
-  mouth: { pos: [-0.035, 1.530, 0.150], euler: [16, 52, 0] },
-  nose: { pos: [-0.045, 1.570, 0.155], euler: [18, 46, 0] },
-  eye: { pos: [-0.055, 1.600, 0.135], euler: [16, 44, 0] },
-  ear: { pos: [-0.195, 1.585, 0.020], euler: [6, 70, 0] },
-  wrist: { pos: [-0.185, 1.060, 0.155], euler: [0, 96, 0] },
-  upperarm: { pos: [-0.245, 1.240, 0.055], euler: [0, 104, 0] },
-  shoulder: { pos: [-0.215, 1.365, 0.095], euler: [0, 96, 0] },
-  chest: { pos: [-0.150, 1.265, 0.175], euler: [0, 140, 0] },
-  neutral: { pos: [-0.185, 1.205, 0.245], euler: [0, 8, 0] },
-  side: { pos: [-0.295, 1.165, 0.095], euler: [0, 22, 0] }
+  forehead: { pos: [-0.112, 1.600, 0.120], euler: [16, 62, 0] },
+  temple: { pos: [-0.150, 1.585, 0.060], euler: [12, 50, 0] },
+  cheek: { pos: [-0.118, 1.520, 0.108], euler: [8, 72, 0] },
+  chin: { pos: [-0.082, 1.462, 0.120], euler: [12, 58, 0] },
+  mouth: { pos: [-0.058, 1.505, 0.128], euler: [16, 50, 0] },
+  nose: { pos: [-0.068, 1.535, 0.138], euler: [18, 44, 0] },
+  eye: { pos: [-0.082, 1.558, 0.118], euler: [16, 42, 0] },
+  ear: { pos: [-0.168, 1.535, 0.012], euler: [6, 66, 0] },
+  wrist: { pos: [-0.150, 1.005, 0.150], euler: [0, 96, 0] },
+  upperarm: { pos: [-0.208, 1.185, 0.045], euler: [0, 104, 0] },
+  shoulder: { pos: [-0.182, 1.318, 0.085], euler: [0, 96, 0] },
+  chest: { pos: [-0.138, 1.285, 0.165], euler: [0, 140, 0] },
+  neutral: { pos: [-0.168, 1.255, 0.225], euler: [0, 8, 0] },
+  side: { pos: [-0.268, 1.215, 0.085], euler: [0, 22, 0] }
 };
 
 /* Movement scale: SVG-ish units -> metres. */
@@ -191,7 +195,7 @@ function islBlendThumb(a, b, t) {
  */
 function islBuildFrames(entry, opts) {
   const options = opts || {};
-  const transition = options.transition != null ? options.transition : 0.32;
+  const transition = options.transition != null ? options.transition : 0.24;
   const hold = options.hold != null ? options.hold : 0.28;
   const moveTime = options.moveTime != null ? options.moveTime : 0.52;
   const reps = Math.max(1, entry.reps || 1);
@@ -218,10 +222,12 @@ function islBuildFrames(entry, opts) {
     frames.push(frame);
   }
 
-  /* rest pose: arms hanging down, open hands */
-  const restRight = [-0.225, 0.965, 0.045];
-  const restLeft = [0.225, 0.965, 0.045];
-  const restEuler = [150, loc.euler[1], 0];
+  /* ready pose: the hands rest in front of the chest, the way a signer
+     holds them between signs — this also keeps the hand inside the frame
+     while it travels to the sign position */
+  const restRight = [-0.172, 1.215, 0.115];
+  const restLeft = [0.172, 1.215, 0.115];
+  const restEuler = [25, loc.euler[1], 0];
 
   /* 1 — transition from rest to the sign position */
   const transitionSteps = 8;

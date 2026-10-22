@@ -275,6 +275,10 @@ function upCnt(){
   document.getElementById('chl').textContent=r+' left';
   const words=v.trim().split(/\s+/).filter(Boolean).length;
   document.getElementById('long-warn').style.display=words>8?'block':'none';
+  /* a new message can be started at any time, even while the previous
+     sequence is still playing */
+  const cta=document.querySelector('.ctabtn');
+  if(cta){cta.classList.remove('busy');}
 }
 
 function togglePause(){
@@ -548,7 +552,7 @@ function getTrViewer(){
       document.getElementById('pause-btn').style.display='none';
       document.getElementById('skip-btn').style.display='none';
       const cta=document.querySelector('.ctabtn');
-      if(cta){cta.disabled=false;cta.style.opacity='';}
+      if(cta){cta.classList.remove('busy');}
       setP(1);
     },
     onWordChange:function(entry){
@@ -576,7 +580,7 @@ function startSign(){
     document.getElementById('pause-btn').style.display='none';
     document.getElementById('skip-btn').style.display='none';
     const cta=document.querySelector('.ctabtn');
-    if(cta){cta.disabled=false;cta.style.opacity='';}
+    if(cta){cta.classList.remove('busy');}
     setP(0);
     renderQ();
     return;
@@ -584,7 +588,7 @@ function startSign(){
   if(queue.length>20&&speed<3){setSpd(3,document.querySelectorAll('.sb')[1]);}
   if(queue.length>40&&speed<5){setSpd(5,document.querySelectorAll('.sb')[2]);}
   const cta=document.querySelector('.ctabtn');
-  if(cta){cta.disabled=true;cta.style.opacity='0.6';}
+  if(cta){cta.classList.add('busy');}
   document.getElementById('idlw').style.display='none';
   document.getElementById('sstage').classList.add('play');
   document.getElementById('pause-btn').style.display='block';

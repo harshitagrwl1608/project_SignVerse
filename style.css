@@ -525,3 +525,4 @@ body.dark .note-warn{background:#33250A;color:#FFD08A}
   .ctl-note{display:none}
   .translate-note{font-size:11px}
 }
+.ctabtn.busy{opacity:.75}
