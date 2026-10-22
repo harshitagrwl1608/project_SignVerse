@@ -193,15 +193,18 @@ const DictionaryUI = (function () {
       '<div class="detail-sub">Demonstration</div>' +
       '<div class="detail-demo">' +
       '<div class="detail-stage" id="dict-stage">' +
-      '<div class="sv-host" id="dict-3d"></div>' +
-      '<svg id="dict-svg" class="sv-fallback" viewBox="0 0 480 400" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"></svg>' +
-      '<div class="sv-overlay" id="dict-overlay"><span class="sv-spin"></span><span>Preparing the 3D avatar…</span></div>' +
+      '<svg id="dict-svg" viewBox="0 0 480 400" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"></svg>' +
+      '</div>' +
+      '<div class="view-switch" id="dict-views" role="group" aria-label="Viewing angle of the signer">' +
+      '<button type="button" class="view-btn on" data-view="front" aria-pressed="true" title="Frontal view of the signer">Front</button>' +
+      '<button type="button" class="view-btn" data-view="back" aria-pressed="false" title="View from behind the signer">Back</button>' +
+      '<button type="button" class="view-btn" data-view="left" aria-pressed="false" title="Left side profile of the signer">Left</button>' +
+      '<button type="button" class="view-btn" data-view="right" aria-pressed="false" title="Right side profile of the signer">Right</button>' +
       '</div>' +
       '<div class="detail-controls" id="dict-controls">' +
       '<button type="button" class="ctl" id="dict-play" aria-label="Play sign">▶</button>' +
       '<button type="button" class="ctl" id="dict-replay" aria-label="Replay sign">↻</button>' +
       '<button type="button" class="ctl" id="dict-loop" aria-pressed="false" aria-label="Loop sign">🔁</button>' +
-      '<button type="button" class="ctl" id="dict-renderer" aria-label="Switch between the 3D avatar and the 2D illustration" title="Switch renderer">3D</button>' +
       '<a class="ctl ctl-link" id="dict-video" href="https://divyangjan.depwd.gov.in/islrtc/" target="_blank" rel="noopener noreferrer" aria-label="Open the official ISLRTC demonstration video (needs internet)" title="Official ISLRTC demonstration — needs an internet connection">🎬</a>' +
       '<div class="ctl-speed" role="group" aria-label="Playback speed">' +
       '<button type="button" class="ctl spd" data-speed="1">🐢</button>' +
@@ -276,25 +279,13 @@ const DictionaryUI = (function () {
     const loopBtn = document.getElementById('dict-loop');
 
     ensureViewer();
-    viewer.bind({
-      svg: document.getElementById('dict-svg'),
-      host: document.getElementById('dict-3d'),
-      stage: document.getElementById('dict-stage')
-    });
+    viewer.bind({ svg: document.getElementById('dict-svg') });
 
     if (playBtn) playBtn.addEventListener('click', function () { viewer.toggle(); });
     if (replayBtn) replayBtn.addEventListener('click', function () { viewer.replay(); });
     if (loopBtn) loopBtn.addEventListener('click', function () { viewer.setLoop(!viewer.loop); });
 
-    const rendererBtn = document.getElementById('dict-renderer');
-    if (rendererBtn) {
-      rendererBtn.addEventListener('click', function () {
-        const next = viewer.preferred === '2d' ? '3d' : '2d';
-        viewer.setRenderer(next);
-        rendererBtn.textContent = next === '2d' ? '2D' : '3D';
-        rendererBtn.classList.toggle('on', next === '3d');
-      });
-    }
+    wireViewSwitch(document.getElementById('dict-views'), viewer);
     const videoLink = document.getElementById('dict-video');
     if (videoLink) {
       videoLink.href = 'https://divyangjan.depwd.gov.in/islrtc/';
@@ -316,40 +307,23 @@ const DictionaryUI = (function () {
     if (viewer) return viewer;
     viewer = new SignViewer.Viewer({
       svg: document.getElementById('dict-svg'),
-      host: document.getElementById('dict-3d'),
-      stage: document.getElementById('dict-stage'),
+      view: (typeof signView !== 'undefined' && signView) ? signView : 'front',
       onState: function (state) {
         const fill = document.getElementById('dict-fill');
         const playBtn = document.getElementById('dict-play');
         const modeEl = document.getElementById('dict-mode');
         const loopBtn = document.getElementById('dict-loop');
-        const overlay = document.getElementById('dict-overlay');
         if (fill) fill.style.width = Math.round((state.progress || 0) * 100) + '%';
         if (playBtn) {
           playBtn.textContent = state.playing ? '⏸' : '▶';
           playBtn.setAttribute('aria-label', state.playing ? 'Pause sign' : 'Play sign');
         }
         if (modeEl) {
-          modeEl.textContent = (state.mode === '3d' && state.preferred !== '2d') ? '3D' : '2D';
-          modeEl.title = state.mode === '3d'
-            ? 'Three.js 3D avatar'
-            : '2D fallback renderer (3D unavailable: ' + (state.error || 'not loaded') + ')';
+          const view = SignRenderer.VIEWS[state.view] || SignRenderer.VIEWS.front;
+          modeEl.textContent = view.label.toUpperCase() + ' VIEW';
+          modeEl.title = view.hint;
         }
         if (loopBtn) loopBtn.setAttribute('aria-pressed', state.loop ? 'true' : 'false');
-        if (overlay) {
-          if (state.threeStatus === 'loading') {
-            overlay.className = 'sv-overlay';
-            overlay.style.display = 'flex';
-            overlay.innerHTML = '<span class="sv-spin"></span><span>Preparing the 3D avatar…</span>';
-          } else if (state.threeStatus === 'failed') {
-            overlay.className = 'sv-overlay sv-overlay-warn';
-            overlay.style.display = 'flex';
-            overlay.innerHTML = '<span>⚠️</span><span>3D is unavailable on this device — showing the 2D illustration. ' +
-              'The official ISLRTC video is linked below.</span>';
-          } else {
-            overlay.style.display = 'none';
-          }
-        }
       }
     });
     if (typeof window !== 'undefined') window.__dictViewer = viewer;
@@ -360,8 +334,6 @@ const DictionaryUI = (function () {
     if (!viewer) return;
     viewer.setSequence([entry], 0);
     viewer.show(entry, { autoPlay: true });
-    /* the 3D engine is loaded lazily the first time a sign is shown */
-    if (viewer.threeStatus === 'idle') viewer.enable3D();
   }
 
   function openDetail(id) {

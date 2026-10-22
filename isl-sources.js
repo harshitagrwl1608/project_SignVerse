@@ -16,7 +16,7 @@
 
    What IS bundled locally is our own material: the handshape / motion
    descriptions written for this project (CC BY 4.0) and the procedural
-   3D avatar built from code (MIT, same as the repository).
+   the multi-view 2D signer renderer (MIT, same as the repository).
    ===================================================================== */
 
 const ISL_SOURCE_REGISTRY = {

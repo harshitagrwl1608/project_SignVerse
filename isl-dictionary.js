@@ -18,7 +18,7 @@
                     `unverified`  → description written for SignVerse,
                                      NOT validated against an ISLRTC video.
                     `reviewed-3d` → a human reviewer compared the local
-                                     3D animation with the official
+                                     animation with the official
                                      reference and signed it off.
 
    The official ISLRTC demonstration video is always the reference. The
@@ -425,8 +425,8 @@ const ISL_LEXICON = [
     id: 'NAMES', en: 'NAME', hi: 'नाम', cat: 'pronouns',
     senses: [{ text: 'asking or stating a name', note: 'Two index fingers tap together.' }],
     synonyms: ['NAAM'],
-    hs: { f: [2, 0, 0, 2, 2], th: 'folded' }, loc: 'neutral', hands: 'both',
-    path: { t: 'tap', dx: 0, dy: 6 }, reps: 2, w: 0, status: 'unverified'
+    hs: { f: [1, 0, 2, 2, 2], th: 'point' }, loc: 'neutral', hands: 'both',
+    path: { t: 'forward', dx: 0, dy: -14 }, reps: 1, w: 0, status: 'unverified'
   },
   {
     id: 'WHERE_FROM', en: 'WHERE FROM', hi: 'कहाँ से', cat: 'pronouns',
@@ -547,7 +547,7 @@ const ISL_LEXICON = [
     senses: [{ text: 'to send / dispatch', note: 'Flat-O hand flicks open and pushes away.' }],
     synonyms: ['BHEJNA'],
     hs: { f: [1, 1, 1, 1, 1], th: 'o' }, loc: 'neutral', hands: 'right',
-    path: { t: 'forward', dx: 0, dy: -16 }, reps: 1, w: 12, status: 'unverified', oval: true
+    path: { t: 'forward', dx: 0, dy: -18 }, reps: 1, w: 12, status: 'unverified', oval: true
   },
   {
     id: 'RECEIVE', en: 'RECEIVE', hi: 'पाना', cat: 'verbs',
@@ -560,8 +560,8 @@ const ISL_LEXICON = [
     id: 'GIVE', en: 'GIVE', hi: 'देना', cat: 'verbs',
     senses: [{ text: 'to give / hand over', note: 'Flat-O opens and pushes forwards.' }],
     synonyms: ['DENA'],
-    hs: { f: [1, 1, 1, 1, 1], th: 'o' }, loc: 'neutral', hands: 'right',
-    path: { t: 'forward', dx: 0, dy: -16 }, reps: 1, w: 12, status: 'unverified', oval: true
+    hs: { f: [1, 1, 1, 1, 1], th: 'o' }, loc: 'chest', hands: 'right',
+    path: { t: 'forward', dx: 0, dy: -14 }, reps: 1, w: 12, status: 'unverified', oval: true
   },
   {
     id: 'TAKE', en: 'TAKE', hi: 'लेना', cat: 'verbs',
@@ -1005,8 +1005,8 @@ const ISL_LEXICON = [
     id: 'NIGHT', en: 'NIGHT', hi: 'रात', cat: 'time',
     senses: [{ text: 'night', note: 'Bent hand arcs down over the flat arm.' }],
     synonyms: ['RAAT'],
-    hs: { f: [2, 0, 0, 0, 0], th: 'folded' }, loc: 'chest', hands: 'both',
-    path: { t: 'down', dx: 0, dy: 16 }, reps: 1, w: -18, status: 'unverified'
+    hs: { f: [1, 1, 1, 1, 1], th: 'curve' }, loc: 'chest', hands: 'both',
+    path: { t: 'arc', dx: 20, dy: 12 }, reps: 1, w: -18, status: 'unverified', curve: true
   },
   {
     id: 'WEEK', en: 'WEEK', hi: 'सप्ताह', cat: 'time',
@@ -1106,7 +1106,7 @@ const ISL_LEXICON = [
     senses: [{ text: 'car / vehicle', note: 'Both fists turn a steering wheel.' }],
     synonyms: ['GAADI', 'VEHICLE'],
     hs: { f: [2, 2, 2, 2, 2], th: 'front' }, loc: 'neutral', hands: 'both',
-    path: { t: 'circle', r: 19 }, reps: 2, w: 0, status: 'unverified'
+    path: { t: 'circle', r: 24 }, reps: 2, w: 0, status: 'unverified'
   },
   {
     id: 'MUSIC', en: 'MUSIC', hi: 'संगीत', cat: 'places',
@@ -1161,32 +1161,35 @@ const ISL_LEXICON = [
    dictionary.
    --------------------------------------------------------------------- */
 const ISL_FINGERSPELLING = [
-  { id: 'A', letter: 'A', f: [2, 2, 2, 2, 2], th: 'side' },
-  { id: 'B', letter: 'B', f: [2, 0, 0, 0, 0], th: 'folded' },
-  { id: 'C', letter: 'C', f: [1, 1, 1, 1, 1], th: 'curve' },
-  { id: 'D', letter: 'D', f: [2, 0, 2, 2, 2], th: 'touch' },
-  { id: 'E', letter: 'E', f: [1, 1, 1, 1, 1], th: 'under' },
-  { id: 'F', letter: 'F', f: [2, 2, 0, 0, 0], th: 'touch_idx' },
-  { id: 'G', letter: 'G', f: [1, 0, 2, 2, 2], th: 'point' },
-  { id: 'H', letter: 'H', f: [2, 0, 0, 2, 2], th: 'folded' },
-  { id: 'I', letter: 'I', f: [2, 2, 2, 2, 0], th: 'folded' },
-  { id: 'J', letter: 'J', f: [2, 2, 2, 2, 0], th: 'folded' },
-  { id: 'K', letter: 'K', f: [1, 0, 0, 2, 2], th: 'between' },
-  { id: 'L', letter: 'L', f: [1, 0, 2, 2, 2], th: 'up' },
-  { id: 'M', letter: 'M', f: [1, 2, 2, 2, 2], th: 'under3' },
-  { id: 'N', letter: 'N', f: [1, 2, 2, 2, 2], th: 'under2' },
-  { id: 'O', letter: 'O', f: [1, 1, 1, 1, 1], th: 'o' },
-  { id: 'P', letter: 'P', f: [1, 0, 2, 2, 2], th: 'point' },
-  { id: 'Q', letter: 'Q', f: [2, 0, 2, 2, 2], th: 'point2' },
-  { id: 'R', letter: 'R', f: [2, 0, 0, 2, 2], th: 'folded' },
-  { id: 'S', letter: 'S', f: [2, 2, 2, 2, 2], th: 'front' },
-  { id: 'T', letter: 'T', f: [1, 2, 2, 2, 2], th: 'between_if' },
-  { id: 'U', letter: 'U', f: [2, 0, 0, 2, 2], th: 'folded' },
-  { id: 'V', letter: 'V', f: [2, 0, 0, 2, 2], th: 'folded' },
-  { id: 'W', letter: 'W', f: [2, 0, 0, 0, 2], th: 'folded' },
-  { id: 'X', letter: 'X', f: [2, 1, 2, 2, 2], th: 'folded' },
-  { id: 'Y', letter: 'Y', f: [0, 2, 2, 2, 0], th: 'out' },
-  { id: 'Z', letter: 'Z', f: [2, 0, 2, 2, 2], th: 'folded' }
+  /* [letter, finger states, thumb, spread, rotation of the hand]
+     The spread separates the fingers, the rotation turns the hand — both
+     are needed so that, for example, U, V and H never look the same. */
+  { id: 'A', letter: 'A', f: [2, 2, 2, 2, 2], th: 'side', spread: 1, rot: null },
+  { id: 'B', letter: 'B', f: [2, 0, 0, 0, 0], th: 'folded', spread: 1, rot: null },
+  { id: 'C', letter: 'C', f: [1, 1, 1, 1, 1], th: 'curve', spread: 1, rot: null },
+  { id: 'D', letter: 'D', f: [2, 0, 2, 2, 2], th: 'touch', spread: 1, rot: null },
+  { id: 'E', letter: 'E', f: [1, 1, 1, 1, 1], th: 'under', spread: 1, rot: [42, 0, 0] },
+  { id: 'F', letter: 'F', f: [2, 2, 0, 0, 0], th: 'touch_idx', spread: 1, rot: null },
+  { id: 'G', letter: 'G', f: [1, 0, 2, 2, 2], th: 'point', spread: 1, rot: [0, 0, 90] },
+  { id: 'H', letter: 'H', f: [2, 0, 0, 2, 2], th: 'folded', spread: 0.45, rot: [0, 0, 90] },
+  { id: 'I', letter: 'I', f: [2, 2, 2, 2, 0], th: 'folded', spread: 1, rot: null },
+  { id: 'J', letter: 'J', f: [2, 2, 2, 2, 0], th: 'folded', spread: 1, rot: null },
+  { id: 'K', letter: 'K', f: [1, 0, 0, 2, 2], th: 'between', spread: 1, rot: null },
+  { id: 'L', letter: 'L', f: [1, 0, 2, 2, 2], th: 'up', spread: 1, rot: null },
+  { id: 'M', letter: 'M', f: [1, 2, 2, 2, 2], th: 'under3', spread: 1, rot: null },
+  { id: 'N', letter: 'N', f: [1, 2, 2, 2, 2], th: 'under2', spread: 1, rot: null },
+  { id: 'O', letter: 'O', f: [1, 1, 1, 1, 1], th: 'o', spread: 1, rot: null },
+  { id: 'P', letter: 'P', f: [1, 0, 2, 2, 2], th: 'point', spread: 1, rot: [58, 0, 0] },
+  { id: 'Q', letter: 'Q', f: [2, 0, 2, 2, 2], th: 'point2', spread: 1, rot: [52, 0, 0] },
+  { id: 'R', letter: 'R', f: [2, 0, 0, 2, 2], th: 'folded', spread: 1, rot: null },
+  { id: 'S', letter: 'S', f: [2, 2, 2, 2, 2], th: 'front', spread: 1, rot: null },
+  { id: 'T', letter: 'T', f: [1, 2, 2, 2, 2], th: 'between_if', spread: 1, rot: null },
+  { id: 'U', letter: 'U', f: [2, 0, 0, 2, 2], th: 'folded', spread: 0.4, rot: null },
+  { id: 'V', letter: 'V', f: [2, 0, 0, 2, 2], th: 'folded', spread: 1.5, rot: null },
+  { id: 'W', letter: 'W', f: [2, 0, 0, 0, 2], th: 'folded', spread: 1.1, rot: null },
+  { id: 'X', letter: 'X', f: [2, 1, 2, 2, 2], th: 'folded', spread: 1, rot: null },
+  { id: 'Y', letter: 'Y', f: [0, 2, 2, 2, 0], th: 'out', spread: 1, rot: null },
+  { id: 'Z', letter: 'Z', f: [2, 0, 2, 2, 2], th: 'folded', spread: 1, rot: null }
 ].map(function (row) {
   return {
     id: 'FS_' + row.id,
@@ -1196,9 +1199,10 @@ const ISL_FINGERSPELLING = [
     type: 'letter',
     senses: [{ text: 'fingerspelled letter ' + row.letter, note: 'Manual alphabet used for names and words without a dedicated sign.' }],
     synonyms: [],
-    hs: { f: row.f, th: row.th },
+    hs: { f: row.f, th: row.th, spread: row.spread },
     loc: 'neutral',
     hands: 'right',
+    rot: row.rot,
     path: row.id === 'J' ? { t: 'arc', dx: 26, dy: -16 } : (row.id === 'Z' ? { t: 'z', dx: 24, dy: 16 } : null),
     reps: 1,
     w: 0,
@@ -1228,8 +1232,8 @@ const ISL_NUMBERS = [
     type: 'number',
     senses: [{ text: 'number ' + row.digit, note: 'Counting numbers in ISL.' }],
     synonyms: [],
-    hs: { f: row.f, th: row.th },
-    loc: 'neutral',
+    hs: { f: row.f, th: row.th, spread: (row.id === 'TWO' ? 0.6 : 1) },
+    loc: 'numbers',
     hands: 'right',
     path: null,
     reps: 1,
@@ -1442,7 +1446,7 @@ const ISLDictionary = (function () {
   function statusOf(entry) {
     const s = entry.status || 'unverified';
     if (s === 'reviewed-3d') {
-      return { key: 'reviewed-3d', label: 'Reviewed 3D', tone: 'ok', detail: 'The local 3D animation was reviewed against an ISLRTC reference demonstration.' };
+      return { key: 'reviewed-3d', label: 'Reviewed animation', tone: 'ok', detail: 'The local animation was reviewed against an ISLRTC reference demonstration.' };
     }
     if (s === 'verified-video') {
       return { key: 'verified-video', label: 'Verified video', tone: 'ok', detail: 'An ISLRTC demonstration video is the reference for this sign.' };
@@ -1456,32 +1460,11 @@ const ISLDictionary = (function () {
     };
   }
 
-  /**
-   * Convert an entry into the shape object understood by the 2D fallback
-   * renderer (same format as the legacy sign table).
-   */
-  function legacyShape(entry) {
-    if (!entry) return null;
-    const hs = entry.hs || { f: [0, 0, 0, 0, 0], th: 'out' };
-    const shape = {
-      f: hs.f.slice(),
-      th: hs.th,
-      w: entry.w || 0,
-      hands: entry.hands || 'right',
-      type: entry.type === 'letter' ? 'letter' : 'word',
-      desc: entry.senses && entry.senses[0] ? entry.senses[0].text : entry.en
-    };
-    if (entry.path) shape.motion = { t: entry.path.t, dx: entry.path.dx || 0, dy: entry.path.dy || 0, r: entry.path.r || 0 };
-    if (entry.curve) shape.curve = true;
-    if (entry.oval) shape.oval = true;
-    return shape;
-  }
-
   return {
     all: all, words: words, wordIds: wordIds, get: get, resolve: resolve, search: search,
     byCategory: byCategory, categories: categories, variantsOf: variantsOf,
     variantParents: variantParents, statusOf: statusOf, norm: norm,
-    legacyShape: legacyShape, emoji: emoji, categoryGroups: categoryGroups
+    emoji: emoji, categoryGroups: categoryGroups
   };
 })();
 

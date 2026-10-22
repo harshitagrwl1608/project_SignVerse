@@ -264,7 +264,7 @@ function selLearn(key){
     ].forEach(function(pair){const b=document.createElement('span');b.className='bdg '+pair[0];b.textContent=pair[1];bw.appendChild(b);});
   }
   const svg=document.getElementById('lhc');
-  if(svg){svg.innerHTML='';renderSign(svg,ISLDictionary.legacyShape(entry),1,null);}
+  if(svg){svg.innerHTML='';renderSign(svg,entry,1,null);}
   // Track learned
   if(learnedSigns&&!learnedSigns.has(key)){
     learnedSigns.add(key);
@@ -339,7 +339,7 @@ function setLearnMode(mode,btn){
   if(mode==='game')startCatGame();
 }
 
-// MIRROR MODE
+// MIRROR MODE — flips the scene left/right (the signer becomes a mirror image)
 function toggleMirror(btn){
   mirrorOn=!mirrorOn;btn.classList.toggle('on',mirrorOn);
   if(typeof learnViewer!=='undefined'&&learnViewer) learnViewer.setMirror(mirrorOn);
@@ -362,8 +362,6 @@ function toggleZoom(btn){
   lZoomed=!lZoomed;btn.classList.toggle('on',lZoomed);
   const lhc=document.getElementById('lhc');
   if(lhc){lhc.style.transform=lZoomed?'scale(1.5)':'scale(1)';lhc.style.transformOrigin='center top';}
-  const host=document.getElementById('ln-3d');
-  if(host){host.style.transform=lZoomed?'scale(1.3)':'scale(1)';host.style.transformOrigin='center center';}
 }
 
 // FAVOURITE
@@ -395,7 +393,7 @@ function showFlash(){
   const fd=document.getElementById('fc-desc');if(fd)fd.textContent=entry.senses[0].text;
   const fe=document.getElementById('fc-emoji');if(fe)fe.textContent=ISLDictionary.emoji(key);
   const svg=document.getElementById('fc-hc');
-  if(svg){svg.innerHTML='';renderSign(svg,ISLDictionary.legacyShape(entry),1,null);}
+  if(svg){svg.innerHTML='';renderSign(svg,entry,1,null);}
 }
 function revealFlash(){
   document.getElementById('flashcard').classList.add('revealed');

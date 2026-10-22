@@ -68,8 +68,35 @@ const ISL_LOCATIONS = {
   shoulder: { pos: [-0.182, 1.318, 0.085], euler: [0, 96, 0] },
   chest: { pos: [-0.138, 1.285, 0.165], euler: [0, 140, 0] },
   neutral: { pos: [-0.168, 1.255, 0.225], euler: [0, 8, 0] },
+  numbers: { pos: [-0.150, 1.235, 0.215], euler: [16, 6, 0] },
   side: { pos: [-0.268, 1.215, 0.085], euler: [0, 22, 0] }
 };
+
+/* ── orientation maths ──────────────────────────────────────────────
+   The hand orientation is kept as a 3×3 matrix so that a per-entry
+   rotation can be composed with the orientation of the body location. */
+function matMul(a,b){
+  const o=[[0,0,0],[0,0,0],[0,0,0]];
+  for(let i=0;i<3;i++)for(let j=0;j<3;j++){
+    let sum=0;for(let k=0;k<3;k++)sum+=a[i][k]*b[k][j];
+    o[i][j]=sum;
+  }
+  return o;
+}
+function matX(a){const c=Math.cos(a),s=Math.sin(a);return [[1,0,0],[0,c,-s],[0,s,c]];}
+function matY(a){const c=Math.cos(a),s=Math.sin(a);return [[c,0,s],[0,1,0],[-s,0,c]];}
+function matZ(a){const c=Math.cos(a),s=Math.sin(a);return [[c,-s,0],[s,c,0],[0,0,1]];}
+function matEuler(e){
+  return matMul(matX(e[0]*Math.PI/180), matMul(matY(e[1]*Math.PI/180), matZ(e[2]*Math.PI/180)));
+}
+const MIRROR_X=[[-1,0,0],[0,1,0],[0,0,1]];
+function matBasis(m){
+  return {
+    x:[m[0][0],m[1][0],m[2][0]],
+    y:[m[0][1],m[1][1],m[2][1]],
+    z:[m[0][2],m[1][2],m[2][2]]
+  };
+}
 
 /* Movement scale: SVG-ish units -> metres. */
 const ISL_MOVE_SCALE = 0.0017;
@@ -203,20 +230,32 @@ function islBuildFrames(entry, opts) {
   const loc = ISL_LOCATIONS[entry.loc] || ISL_LOCATIONS.neutral;
   const twoHands = entry.hands === 'both';
   const base = entry.hs || { f: [0, 0, 0, 0, 0], th: 'out' };
+  /* the entry may rotate the hand inside the location (needed by the
+     manual alphabet, where the same fingers point in different directions)
+     and may spread the fingers apart */
+  const spread = (base.spread != null) ? base.spread : 1;
+  const locMat = matEuler(loc.euler);
+  const rotMat = entry.rot ? matEuler(entry.rot) : null;
+  const rightMat = rotMat ? matMul(locMat, rotMat) : locMat;
+  const leftMat = matMul(matMul(MIRROR_X, rightMat), MIRROR_X);
+  const rightBasis = matBasis(rightMat);
+  const leftBasis = matBasis(leftMat);
 
   const frames = [];
   let t = 0;
 
   function pushFrame(time, rightPos, rightEuler, leftPos, leftEuler, f, th, mix, hs2) {
-    const frame = { t: time, hands: {} };
+    const frame = { t: time, hands: {}, spread: spread };
     if (rightPos) {
       frame.hands.right = {
-        pos: rightPos, euler: rightEuler, f: f, th: th, mix: mix || 0, hs2: hs2 || null
+        pos: rightPos, euler: rightEuler, basis: rightBasis, f: f, th: th,
+        mix: mix || 0, hs2: hs2 || null
       };
     }
     if (leftPos) {
       frame.hands.left = {
-        pos: leftPos, euler: leftEuler, f: f, th: th, mix: mix || 0, hs2: hs2 || null
+        pos: leftPos, euler: leftEuler, basis: leftBasis, f: f, th: th,
+        mix: mix || 0, hs2: hs2 || null
       };
     }
     frames.push(frame);

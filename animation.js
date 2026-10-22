@@ -447,7 +447,24 @@ function drawMotion(svg,motion,cx,cy,prog){
   el('circle',{cx:dot.getAttribute('cx'),cy:dot.getAttribute('cy'),r:'9',fill:'none',stroke:'#FF6B6B','stroke-width':'1.5',opacity:'0.25'},svg);
 }
 
+/* ── viewing angle shared by every simulation ───────────────── */
+let signView='front';
+function setSignView(v){
+  signView=(window.SignRenderer&&SignRenderer.VIEWS[v])?v:'front';
+  return signView;
+}
+
+/**
+ * Render a sign.
+ *  · ISL entries  → the multi-view 2D renderer (sign-renderer.js)
+ *  · legacy shapes → the original flat hand renderer, still used by the
+ *                    ASL letter preview of the recogniser tab
+ */
 function renderSign(svg,sign,prog,prev){
+  if(sign&&sign.hs&&sign.loc){
+    SignRenderer.render(svg,sign,{progress:prog||1,view:signView,mirror:(typeof mirrorOn!=='undefined'?mirrorOn:false)});
+    return;
+  }
   svg.innerHTML='';
   prog=prog||1;
   if(mirrorOn){
@@ -522,12 +539,8 @@ let trViewer=null;
 function trState(state){
   const fill=document.getElementById('pfill');
   if(fill) fill.style.width=Math.round((state.progress||0)*100)+'%';
-  const mode=document.getElementById('tr-mode');
-  if(mode){
-    const using3d=state.mode==='3d'&&state.preferred!=='2d';
-    mode.textContent=using3d?'3D':'2D';
-    mode.title=using3d?'Three.js 3D avatar — click to switch':'2D illustration — click to switch to the 3D avatar';
-  }
+  const angle=document.getElementById('tr-angle');
+  if(angle) angle.textContent=(SignRenderer.VIEWS[state.view]||SignRenderer.VIEWS.front).label.toUpperCase()+' VIEW';
   const pb=document.getElementById('pause-btn');
   if(pb&&pb.style.display!=='none') pb.textContent=state.playing?'⏸ Pause':'▶ Resume';
   const note=document.getElementById('tr-note');
@@ -543,8 +556,7 @@ function getTrViewer(){
   if(trViewer) return trViewer;
   trViewer=new SignViewer.Viewer({
     svg:document.getElementById('hc'),
-    host:document.getElementById('tr-3d'),
-    stage:document.getElementById('sstage'),
+    view:signView,
     onState:trState,
     onEnd:function(){
       document.getElementById('cbadge').textContent='Done! 🎉';
@@ -598,7 +610,6 @@ function startSign(){
   const viewer=getTrViewer();
   viewer.setSpeed(speed);
   viewer.playSequence(signable.map(function(t){return t.entry;}),0);
-  if(viewer.threeStatus==='idle') viewer.enable3D();
 }
 
 function renderQ(){
@@ -666,7 +677,7 @@ function nextQ(){
   qKey=newKey;
   const entry=ISLDictionary.get(qKey);
   if(!entry) return;
-  const sign=ISLDictionary.legacyShape(entry);
+  const sign=entry;
   // Build options — cap loop to avoid infinite hang if QP is small
   const opts=new Set([qKey]);
   let tries=0;
@@ -763,20 +774,23 @@ function islCategoryGroups(){
 const LK=ISLDictionary.words().map(function(e){return e.id;});
 let lIdx=0,selKey='HELLO';
 
-// ── LEARN VIEWER (3D + 2D fallback) ────────────────────
+// ── LEARN VIEWER ────────────────────────────────────────
 let learnViewer=null;
 function getLearnViewer(){
   if(learnViewer) return learnViewer;
   const svg=document.getElementById('lhc');
   learnViewer=new SignViewer.Viewer({
     svg:svg,
-    host:document.getElementById('ln-3d'),
-    stage:svg?svg.parentNode:null,
+    view:signView,
     onState:function(state){
       const bar=document.getElementById('ln-fill');
       if(bar) bar.style.width=Math.round((state.progress||0)*100)+'%';
       const mode=document.getElementById('ln-mode');
-      if(mode) mode.textContent=state.mode==='3d'?'3D':'2D';
+      if(mode){
+        const view=SignRenderer.VIEWS[state.view]||SignRenderer.VIEWS.front;
+        mode.textContent=view.label.toUpperCase();
+        mode.title=view.hint;
+      }
     }
   });
   return learnViewer;
@@ -791,7 +805,6 @@ function lPlay(){
   const v=getLearnViewer();
   v.setSequence([entry],0);
   v.show(entry,{autoPlay:true});
-  if(v.threeStatus==='idle') v.enable3D();
 }
 function lPrev(){selLearn(LK[Math.max(0,lIdx-1)])}
 function lNext(){selLearn(LK[Math.min(LK.length-1,lIdx+1)])}
@@ -809,18 +822,40 @@ function swTab(id,btn){
     const sb=document.getElementById('lsb');
     if(!sb.children.length){buildLSB();}
     selLearn(selKey);
-    // the 3D avatar is loaded the first time the learner opens this tab
     const lv=getLearnViewer();
-    if(lv.threeStatus==='idle') lv.enable3D();
+    wireViewSwitch(document.getElementById('ln-views'),lv);
+    lv.setMirror(mirrorOn);
   }
   // Dictionary: the search index is built once, results are re-filtered
   if(id==='dictionary'){
     if(typeof DictionaryUI!=='undefined'&&DictionaryUI) DictionaryUI.refresh();
   }
-  // The 3D avatar keeps rendering only while its panel is visible
+  // the simulation is paused while its panel is hidden
   if(id!=='translate'&&trViewer) trViewer.pause();
   if(id!=='learn'&&typeof learnViewer!=='undefined'&&learnViewer) learnViewer.pause();
   if(id!=='recognize'&&recRunning) stopRecognizer();
+}
+
+/**
+ * Wire a group of view buttons (data-view="front|back|left|right").
+ * Switching the angle re-renders the current sign — it never restarts
+ * the simulation.
+ */
+function wireViewSwitch(root,viewer){
+  if(!root) return;
+  const buttons=root.querySelectorAll('[data-view]');
+  buttons.forEach(function(btn){
+    btn.addEventListener('click',function(){
+      const v=btn.dataset.view;
+      setSignView(v);
+      buttons.forEach(function(b){
+        const on=(b===btn);
+        b.classList.toggle('on',on);
+        b.setAttribute('aria-pressed',on?'true':'false');
+      });
+      if(viewer) viewer.setView(v);
+    });
+  });
 }
 
 // ── STAGE CONTROLS (translate) ─────────────────────────
@@ -842,13 +877,7 @@ function swTab(id,btn){
       loop.setAttribute('aria-pressed',v.loop?'true':'false');
       loop.classList.toggle('on',v.loop);
     });
-    const modeBtn=document.getElementById('tr-mode');
-    if(modeBtn) modeBtn.addEventListener('click',function(){
-      const v=getTrViewer();
-      const next=v.preferred==='2d'?'3d':'2d';
-      v.setRenderer(next);
-      modeBtn.textContent=next==='2d'?'2D':'3D';
-    });
+    wireViewSwitch(document.getElementById('tr-views'),getTrViewer());
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bind);
   else bind();

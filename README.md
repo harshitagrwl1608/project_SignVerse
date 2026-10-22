@@ -13,15 +13,16 @@ favourites and progress tracking.
 
 ---
 
-## 1. What changed in this release
+## 1. What is in this release
 
-| Area | Before | Now |
-| --- | --- | --- |
-| Dictionary | hard-coded ASL-style sign table (`S` in `animation.js`) | source-backed ISL lexicon (`isl-dictionary.js`) with English **and** Hindi glosses, word senses, synonyms, alternate/regional variants, source attribution and licence notes |
-| Animation | one reusable SVG hand, the same motion for every word | a **rigged 3D avatar** (Three.js) with independently articulated fingers/thumbs, IK-solved arms, per-word handshape, body location, movement path, repetitions and timing — plus the old 2D renderer as a fallback |
-| Controls | pause / skip only | play · pause · replay · loop · skip · slow/normal/fast, progress bar, current-word indicator, reduced-motion support |
-| Search | none | fast English + Hindi + synonym + sense search, category filters, status filters, empty/loading/unavailable states |
-| Verification | none | explicit statuses (`reviewed-3d`, `verified-video`, `unverified`, `unavailable`) shown on every entry, with a visible notice when a sign is only an approximation |
+| Area | State |
+| --- | --- |
+| Dictionary | Source-backed ISL lexicon (`isl-dictionary.js`) with English **and** Hindi glosses, word senses, synonyms, alternate/regional variants, source attribution and licence notes |
+| Simulation | A **2D multi-view renderer** (`sign-renderer.js`): the signer is modelled in 3D and projected onto SVG, so the same sign can be seen from the **front, the back, the left profile and the right profile** — real rotations of the same model, not mirrored copies |
+| Controls | Play · pause · replay · loop · skip, slow/normal/fast, progress bar, current-word indicator, reduced-motion support |
+| Search | Fast English + Hindi + synonym + sense search, category filters, status filters, empty/loading/unavailable states |
+| Verification | Explicit statuses (`reviewed-3d` → *reviewed animation*, `verified-video`, `unverified`, `unavailable`) shown on every entry, with a visible notice when a sign is only an approximation |
+| Audit | `tools/audit-dictionary.js` checks **every** entry (shape, location, movement, resolvability, duplicate animations) and writes an inventory to `docs/` |
 
 The camera-based recogniser (`#panel-recognize`, MediaPipe/TF.js pipeline in
 `features.js`) is **out of scope and untouched** — its markup, handlers,
@@ -39,7 +40,7 @@ canvases and styles are unchanged.
 | [ISLRTC dictionary videos on YouTube](https://www.youtube.com/@ISLRTC) | Public demonstrations | Linked, not re-hosted |
 | [data.gov.in — Indian Sign Language Dictionary](https://data.gov.in/catalog/indian-sign-language-dictionary) | Open-government-data catalogue metadata | Linked (GoD licence as stated on the catalogue page) |
 | [ARGISL / RKMVERI ISL generation research](https://cs.rkmvu.ac.in/~isl/) | Supplementary reference for sign motion conventions | Linked for reference only (© CS, RKMVERI) |
-| **SignVerse local lexicon** (`isl-dictionary.js`) | Handshape + motion + location descriptions written for this project, and the procedural 3D avatar | Our own material: **CC BY 4.0** for the text/description data, **MIT** for the code. Every entry is labelled as an *approximation* unless a human reviewer signed it off. |
+| **SignVerse local lexicon** (`isl-dictionary.js`) | Handshape + motion + location descriptions written for this project, and the multi-view renderer | Our own material: **CC BY 4.0** for the text/description data, **MIT** for the code. Every entry is labelled as an *approximation* unless a human reviewer signed it off. |
 
 The registry with all URLs, publishers, licence notes and per-term adapters
 lives in **`isl-sources.js`** (`ISLSources`). The UI prints the attribution
@@ -50,7 +51,7 @@ next to every external link and marks links that need an internet connection.
 | Status | Meaning |
 | --- | --- |
 | `verified-video` | An ISLRTC demonstration video is the reference for this sign (linked, never embedded). |
-| `reviewed-3d` | A human reviewer compared the local 3D animation with the official reference and signed it off. |
+| `reviewed-3d` | A human reviewer compared the local animation with the official reference and signed it off. |
 | `unverified` | The local animation is an approximation written for SignVerse. **Not** validated against an ISLRTC video. Shown with a warning badge and an explicit notice. |
 | `unavailable` | No demonstration exists yet; the entry explains why and still links to the official dictionary. |
 
@@ -62,105 +63,113 @@ No entry is marked verified on the basis of a plausible-looking description.
 
 ```
 index.html          markup (Translate · Dictionary · Quiz · Learn · Recognise)
-style.css           design system, new dictionary/3D components, a11y, reduced motion
+style.css           design system, dictionary/angle components, a11y, reduced motion
 isl-sources.js      source registry + source adapters (attribution, licences, links)
 isl-dictionary.js   the ISL lexicon: senses, Hindi glosses, synonyms, variants, statuses
 sign-clips.js       sign → keyframe poses (handshape, body location, movement path)  [no rendering code]
-sign-rig.js         procedural Three.js avatar: rig, IK, materials, lights, mixer, disposal
-sign-viewer.js      demonstration controller: 3D/2D switching, play/pause/replay/loop/skip, speeds, progress
+sign-renderer.js    the multi-view 2D renderer: 3D model → SVG projection, 4 angles
+sign-viewer.js      demonstration controller: play/pause/replay/loop/skip, speeds, progress, angles
 dictionary-ui.js    Dictionary tab: search, filters, result list, detail view, states
 features.js         gamification, learn engine, camera recogniser (unchanged camera code)
-animation.js        legacy SVG hand renderer (2D fallback), translate queue, tabs, quiz
+animation.js        legacy flat hand renderer (ASL letter preview of the recogniser),
+                    translate queue, quiz, tabs, angle wiring
+tools/audit-dictionary.js   offline integrity check for every lexicon entry
+docs/isl-audit.md   the generated inventory of all entries
 ```
 
 Data and rendering are kept apart: `isl-dictionary.js` (metadata) →
-`sign-clips.js` (motion data) → `sign-rig.js` (renderer) → `sign-viewer.js`
-(playback controller).
+`sign-clips.js` (motion data) → `sign-renderer.js` (renderer) →
+`sign-viewer.js` (playback controller).
 
-### The 3D avatar
+### The simulation and the four viewing angles
 
-* **Procedural, code-generated rig** — no third-party model is downloaded, so
-  nothing is redistributed and the avatar weighs kilobytes of source instead of
-  megabytes of GLB:
-  `root → torso → neck → head` and
-  `torso → shoulder → upperArm → elbow → forearm → wrist → palm → 4 fingers × (MCP/PIP/DIP) + 2 thumb joints`.
-* **Human proportions and a face** — the head has eyes, brows, nose, mouth,
-  ears and hair; the limbs are tapered bones with rounded joints so the arm
-  reads as one continuous limb instead of a chain of beads.
-* **Two-link IK with a pole vector** places the elbow on the circle of valid
-  solutions, closest to a natural "elbow down and slightly out" direction, so
-  the arm looks human instead of mechanical.
-* **Camera framing follows the sign.** For every clip the camera computes the
-  box that contains the head *and* the path of the hands and frames it with a
-  margin — the handshape, the part a learner has to read, is always large
-  enough to see and never leaves the frame.
-* **Every word gets its own clip.** A clip is generated from the entry's
-  handshape, body location, movement path, repetition count and timing — so
-  `HELLO` (forehead, arc), `EAT` (mouth, tap ×3) and `LOVE` (two hands,
-  crossed over the chest) are genuinely different motions. Clips are built
-  with `THREE.AnimationClip` + `AnimationMixer` on demand and cached per entry.
-* **Lazy loading** — Three.js is fetched from a CDN only when the first sign
-  is demonstrated, and the 3D renderer is never initialised for the quiz,
-  the flashcards or the camera tab.
-* **Graceful degradation** — if WebGL or the CDN is unavailable, the viewer
-  switches to the existing 2D SVG renderer and says so in the UI; nothing
-  else in the application breaks.
-* **Clean teardown** — `Avatar.dispose()` releases geometries, materials, the
-  renderer, the WebGL context and the animation mixer; the viewer cancels
-  animation frames and removes its listeners.
+The signer (head, torso, arms, hands with five articulated fingers) is modelled
+in 3D and **projected** onto the SVG stage. That is what makes the four views
+genuine instead of faked:
+
+* **Front** — the signer faces the viewer.
+* **Back** — the camera moves behind the signer; the hair, the shoulders and
+  the hands are seen from behind (the right hand appears on the right, as it
+  must when you stand behind someone).
+* **Left** / **Right** — true side profiles: the nose, the ear and the profile
+  of the hand show which way the signer is facing.
+
+Because all four views come from the same model and the same frame data, the
+handshape, the arm, the body orientation and the timing stay consistent
+between them. The depth sorting (painter's algorithm) makes the near hand
+cover the far hand, and the elbow is solved with a pole-vector IK so the arm
+looks the same from every side.
+
+The front view is the refined version of the original flat hand: the fingers
+are separate tapered segments with knuckles, the palm is a solid slab with
+volume, the thumb has its own articulation, the hand keeps a correct palm
+orientation and the camera frames the head **and** the path of the hands so
+that nothing leaves the frame.
+
+### Keyboard, motion and accessibility
+
+* Every control is a real `<button>` with an accessible name; the angle
+  switcher is a labelled radio-style group with `aria-pressed`.
+* `prefers-reduced-motion` disables the CSS animations and stops the
+  simulation from auto-playing (the sign is shown as a static pose).
+* Visible `:focus-visible` outlines, screen-reader labels for the search
+  fields and the result list, and responsive layouts down to 390 px.
 
 ---
 
 ## 4. Running it
 
-No build step. Serve the folder over HTTP (a `file://` page cannot fetch the
-Three.js ES module reliably):
+No build step. Serve the folder over HTTP:
 
 ```bash
 python3 -m http.server 8000
 # then open http://localhost:8000/index.html
 ```
 
-Everything except the optional 3D enhancement works offline.
+Everything works offline — there are no external assets and no CDN dependency.
 
 ---
 
-## 5. Testing performed
+## 5. Checks that are run
 
-* `node --check` on every JavaScript file (syntax).
-* Headless Chromium (Puppeteer + system Chromium, SwiftShader WebGL) end-to-end
-  script covering: page load, English search, Hindi search, missing-term empty
-  state, detail view (senses, variants, sources, status), 3D activation,
-  playback controls, translate queue, pause/skip/speed, unknown words, Learn
-  tab, quiz answering, favourites/learned persistence, theme toggle, tab
-  switching with 3D teardown, and the camera panel's element integrity —
-  **0 console errors, 0 page errors**.
-* Manual diff review: the camera panel (`#panel-recognize`) and its handlers
-  are byte-identical to `main`.
-* Mobile pass at 390 × 844 (headless Chromium): no horizontal overflow, the
-  navigation scrolls, the dictionary stacks into a single column and the 3D
-  canvas resizes with the stage.
+```bash
+node --check *.js                     # syntax of every script
+node tools/audit-dictionary.js        # integrity of all 187 lexicon entries
+node tools/audit-dictionary.js --json --md   # + docs/isl-audit.{json,md}
+```
+
+Browser checks (headless Chromium, Puppeteer):
+
+* page load, English search, Hindi search, missing-term empty state;
+* dictionary detail (senses, variants, sources, verification status);
+* **all four angles** in the dictionary, the translation stage and the learn
+  panel — switching an angle must not restart the simulation;
+* playback controls, loop, speed changes, pause/resume, skip;
+* the translation queue, unknown words, the quiz, favourites and learned
+  progress, the theme;
+* **every entry rendered in all four views** (187 × 4 = 748 renders, 0 empty);
+* the camera panel's element integrity (unchanged);
+* 390 × 844 mobile viewport, no horizontal overflow.
 
 ---
 
 ## 6. Known limitations
 
-* The offline lexicon holds ~150 curated words; it is **not** the ISLRTC
-  dictionary (which contains thousands of entries). Words outside the lexicon
-  are fingerspelled when short, otherwise the app points you at the official
-  dictionary.
-* Every bundled 3D animation is currently marked **`unverified`** — an
-  approximation written for SignVerse. A human reviewer must compare it with
-  the ISLRTC demonstration before an entry can be promoted to `reviewed-3d`.
+* The offline lexicon holds 187 curated entries (151 words, 26 manual-alphabet
+  letters, 10 numbers). It is **not** the ISLRTC dictionary, which contains
+  thousands of entries. Words outside the lexicon are fingerspelled when
+  short, otherwise the app points you at the official dictionary.
+* **Every bundled animation is still `unverified`** — an approximation written
+  for SignVerse. A human reviewer must compare it with the ISLRTC
+  demonstration before an entry can be promoted to `reviewed-3d`.
 * ISL has strong regional variation. The lexicon documents the alternate signs
   it knows about; the regional variants that only exist in the official
   dictionary are reachable through the link, not mirrored.
-* The 3D avatar is a stylised low-poly figure, not a photoreal human, and the
-  camera angle is fixed (front view). Mirror mode is available in the Learn tab.
-* The quiz still renders the 2D illustration for speed; the dictionary and
-  translation views use the 3D avatar.
-* The recogniser tab still works with the legacy ASL-style letter table —
-  it was explicitly out of scope for this release.
+* The renderer is a stylised 2D figure. It shows the hand shape, the palm
+  orientation and the movement path faithfully, but it is not a photographic
+  human — use the linked ISLRTC video to check the exact execution.
+* The recogniser tab still uses the legacy ASL-style letter table — it was
+  explicitly out of scope for this release.
 
 ---
 

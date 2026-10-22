@@ -101,12 +101,17 @@
         <button type="button" class="ctl" id="tr-play" aria-label="Play or pause the demonstration">▶</button>
         <button type="button" class="ctl" id="tr-replay" aria-label="Replay the current sign">↻</button>
         <button type="button" class="ctl" id="tr-loop" aria-pressed="false" aria-label="Loop the demonstration">🔁</button>
-        <button type="button" class="ctl-mode" id="tr-mode" title="Switch between the 3D avatar and the 2D illustration">2D</button>
+        <span class="ctl-mode" id="tr-angle">FRONT VIEW</span>
         <span class="ctl-note" id="tr-note">Sign a word to begin</span>
       </div>
+      <div class="view-switch" id="tr-views" role="group" aria-label="Viewing angle of the signer">
+        <button type="button" class="view-btn on" data-view="front" aria-pressed="true" title="Frontal view of the signer">Front</button>
+        <button type="button" class="view-btn" data-view="back" aria-pressed="false" title="View from behind the signer">Back</button>
+        <button type="button" class="view-btn" data-view="left" aria-pressed="false" title="Left side profile of the signer">Left</button>
+        <button type="button" class="view-btn" data-view="right" aria-pressed="false" title="Right side profile of the signer">Right</button>
+      </div>
       <div class="scanv">
-        <div class="sv-host" id="tr-3d"></div>
-        <svg id="hc" class="sv-fallback" viewBox="0 0 480 400" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:400px;height:100%"></svg>
+        <svg id="hc" viewBox="0 0 480 400" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:400px;height:100%"></svg>
         <div class="idlw" id="idlw">
           <span class="iem">🖐️</span>
           <div class="itx">Ready to sign!</div>
@@ -189,7 +194,7 @@
       <button class="qmb" onclick="setQM('spell',this)">✏️ Spell It!</button>
     </div>
     <div class="qstg">
-      <svg id="qhc" class="sv-fallback" viewBox="0 0 480 400" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:380px;height:100%"></svg>
+      <svg id="qhc" viewBox="0 0 480 400" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:380px;height:100%"></svg>
       <div class="qcd" id="qcd"></div>
     </div>
     <div class="qbody">
@@ -252,8 +257,7 @@
     <div id="learn-normal">
       <div class="ldet">
         <div class="lcw" style="position:relative">
-          <div class="sv-host" id="ln-3d"></div>
-          <svg id="lhc" class="sv-fallback" viewBox="0 0 480 400" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:380px;height:100%"></svg>
+          <svg id="lhc" viewBox="0 0 480 400" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:380px;height:100%"></svg>
           <div class="idlw" id="lidl"><span class="iem">👆</span><div class="itx">Pick a sign</div><div class="isx">from the sidebar</div></div>
           <!-- step dots -->
           <div class="step-row" id="step-row" style="position:absolute;bottom:8px;left:0;right:0"></div>
@@ -274,7 +278,13 @@
         <button class="ltool-btn on" onclick="setLSpeed(3,this)">🚶</button>
         <button class="ltool-btn" onclick="setLSpeed(5,this)">🚀</button>
         <button class="ltool-btn" id="zoom-btn" onclick="toggleZoom(this)" style="margin-left:auto">🔍 Zoom</button>
-        <span class="ctl-mode" id="ln-mode" title="Renderer in use">2D</span>
+        <span class="ctl-mode" id="ln-mode" title="Viewing angle">FRONT</span>
+      </div>
+      <div class="view-switch" id="ln-views" role="group" aria-label="Viewing angle of the signer">
+        <button type="button" class="view-btn on" data-view="front" aria-pressed="true">Front</button>
+        <button type="button" class="view-btn" data-view="back" aria-pressed="false">Back</button>
+        <button type="button" class="view-btn" data-view="left" aria-pressed="false">Left</button>
+        <button type="button" class="view-btn" data-view="right" aria-pressed="false">Right</button>
       </div>
       <div style="display:flex;gap:8px;width:100%;max-width:440px;align-items:center">
         <div class="ctl-bar" style="flex:1"><div class="ctl-fill" id="ln-fill"></div></div>
@@ -289,7 +299,7 @@
     <div id="learn-flash" style="display:none;width:100%;max-width:440px">
       <div class="flashcard" id="flashcard" onclick="revealFlash()">
         <div class="fc-front">
-          <svg id="fc-hc" class="sv-fallback" viewBox="0 0 480 400" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:360px;height:220px"></svg>
+          <svg id="fc-hc" viewBox="0 0 480 400" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:360px;height:220px"></svg>
           <span class="fc-hint">👆 Tap to reveal the word!</span>
         </div>
         <div class="fc-back">
@@ -467,7 +477,7 @@
 <script src="isl-sources.js"></script>
 <script src="isl-dictionary.js"></script>
 <script src="sign-clips.js"></script>
-<script src="sign-rig.js"></script>
+<script src="sign-renderer.js"></script>
 <script src="sign-viewer.js"></script>
 <script src="dictionary-ui.js"></script>
 <script src="features.js"></script>
